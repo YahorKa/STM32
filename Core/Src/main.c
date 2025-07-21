@@ -46,7 +46,7 @@
 #define DMAdemo 0
 #define isDMA 0
 #define isADC 0
-#define isDMA_ADC
+#define isDMA_ADC 0
 #define isPWM 0
 #define isWS2812 0
 #define isIMU 0
@@ -132,10 +132,11 @@ int main(void)
   MX_SPI1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  OLED_Init();
-  OLED_Clear();
-  printf("Hello from printf!\n");
-  OLED_ShowString(0, 0, "Hello from i2c!", 8);
+  //OLED_Init();
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+  //OLED_Clear();
+  //printf("Hello from printf!\n");
+  //OLED_ShowString(0, 0, "Hello from i2c!", 8);
   HAL_UART_Transmit(&huart2, (uint8_t *)"Hello from UART!\n", 17, HAL_MAX_DELAY);
 #if (DMAdemo)
   const uint8_t b = 0x00;
@@ -167,9 +168,10 @@ int main(void)
   while (1)
   {
 #if (isblink)
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+ HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
     HAL_Delay(500);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
     HAL_Delay(500);
 #endif
 

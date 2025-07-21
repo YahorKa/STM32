@@ -53,6 +53,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     "${PROJECT_SOURCE_DIR}/Core/Src/imu.c"
 
 )
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_OBJCOPY} -O binary
+  $<TARGET_FILE:${PROJECT_NAME}>
+  ${PROJECT_NAME}.bin
+)
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
