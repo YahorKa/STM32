@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.22)
-
 #
 # This file is generated only once,
 # and is not re-generated if converter is called multiple times.
 #
 # User is free to modify the file as much as necessary
 #
-
 # Setup compiler settings
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 # Define the build type
@@ -44,13 +44,16 @@ add_subdirectory(cmake/stm32cubemx)
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
-
+file(GLOB MODULE_SOURCES "${PROJECT_SOURCE_DIR}/Modules/*.cpp")
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     "${PROJECT_SOURCE_DIR}/Core/Src/screen.c"
     "${PROJECT_SOURCE_DIR}/Core/Src/ws2812.c"
     "${PROJECT_SOURCE_DIR}/Core/Src/imu.c"
+    "${PROJECT_SOURCE_DIR}/Core/Src/adc.c"
+    "${MODULE_SOURCES}"
+    "${PROJECT_SOURCE_DIR}/Core/Src/sys_manager.cpp"
 
 )
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -61,12 +64,19 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+    "${PROJECT_SOURCE_DIR}/Core/Inc"
+    "${PROJECT_SOURCE_DIR}/Modules"
     # Add user defined include paths
 )
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
+    USE_MODULE_UART
+    USE_MODULE_ADC
+    USE_MODULE_PWM
+    USE_MODULE_WS2812
+    USE_MODULE_IMU
 )
 
 # Add linked libraries

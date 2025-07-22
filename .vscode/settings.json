@@ -3,6 +3,8 @@
     "screen.h": "c",
     "stdlib.h": "c",
     "string.h": "c",
-    "ws2812.h": "c"
+    "ws2812.h": "c",
+    "string_view": "cpp",
+    "system_clock.h": "c"
   }
 }
