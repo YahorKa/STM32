@@ -7,10 +7,10 @@
 #include "usart.h"
 #include "gpio.h"
 
-
 // SystemManager.cpp
-void SystemManager::init() {
-       MX_GPIO_Init();
+void SystemManager::init()
+{
+    MX_GPIO_Init();
     MX_DMA_Init();
     MX_ADC1_Init();
     MX_I2C1_Init();
@@ -20,12 +20,22 @@ void SystemManager::init() {
     MX_USART2_UART_Init();
     // OLED_Init();
     // OLED_Clear();
-  // printf("Hello from printf!\n");
-  // OLED_ShowString(0, 0, "Hello from i2c!", 8);
- // HAL_UART_Transmit(&huart2, (uint8_t *)"Hello from UART!\n", 17, HAL_MAX_DELAY);
+    // printf("Hello from printf!\n");
+    // OLED_ShowString(0, 0, "Hello from i2c!", 8);
+    // HAL_UART_Transmit(&huart2, (uint8_t *)"Hello from UART!\n", 17, HAL_MAX_DELAY);
 }
 
-void SystemManager::loop() {
-    for (auto* mod : activeModules)
+void SystemManager::loop()
+{
+    //HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
+    for (auto *mod : activeModules)
         mod->loop();
+}
+void SystemManager::add(Module *mod)
+{
+    activeModules.push_back(mod);
+}
+SystemManager::~SystemManager()
+{
+    for (auto *mod : activeModules) delete mod;
 }

@@ -78,6 +78,7 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     USE_MODULE_WS2812
     USE_MODULE_IMU
 )
+target_link_options(${CMAKE_PROJECT_NAME}  PRIVATE -u _printf_float)
 
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}

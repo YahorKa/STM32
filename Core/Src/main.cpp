@@ -11,6 +11,7 @@
 #include "imu.h"
 
 #include "sys_manager.h"
+#include "module_adc.h"
 
 #define isblink 1
 #define DMAdemo 0
@@ -73,7 +74,6 @@ void Error_Handler(void)
   while (1)
   {
   }
-
 }
 
 void increment(uint8_t *a)
@@ -89,6 +89,7 @@ SystemManager sys_manager;
 // Entry Point
 int main(void)
 {
+  // printf("X");
 
   char buffer[20];
 #if (isDMA)
@@ -112,8 +113,7 @@ int main(void)
 #endif
   /* USER CODE END SysInit */
   sys_manager.init();
-  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-  
+  sys_manager.add(new Module_ADC()); // change to uniq
 #if (DMAdemo)
   const uint8_t b = 0x00;
   OLED_ShowString(0, 0, "Hello, World!", 8);
@@ -137,12 +137,13 @@ int main(void)
   while (ADXL345_Init() != HAL_OK)
     ;
 #endif
-
+  // turn off led
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   while (1)
   {
     sys_manager.loop();
 #if (isblink)
-   // HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
+    // HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_Delay(500); // задержка в миллисекундах
 
@@ -214,4 +215,3 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
-
