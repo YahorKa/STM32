@@ -12,6 +12,9 @@
 
 #include "sys_manager.h"
 #include "module_adc.h"
+#include "sensor_temperature_KTY81.h"
+#include "internal_sensor.h"
+
 
 #define isblink 1
 #define DMAdemo 0
@@ -23,6 +26,11 @@
 #define isIMU 0
 #define isUARTdemo 0
 
+void frequency(int Hz)
+{
+  uint32_t period_ms = 1000U / Hz;
+  HAL_Delay(period_ms);
+}
 // Clock
 void SystemClock_Config(void)
 {
@@ -112,8 +120,9 @@ int main(void)
   HAL_ADC_MspInit(&hadc1);
 #endif
   /* USER CODE END SysInit */
+  sys_manager.add(new InternalSensor()); // change to uniq
   sys_manager.init();
-  sys_manager.add(new Module_ADC()); // change to uniq
+  
 #if (DMAdemo)
   const uint8_t b = 0x00;
   OLED_ShowString(0, 0, "Hello, World!", 8);
@@ -141,6 +150,7 @@ int main(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   while (1)
   {
+    frequency(2);
     sys_manager.loop();
 #if (isblink)
     // HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);

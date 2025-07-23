@@ -12,7 +12,7 @@ void SystemManager::init()
 {
     MX_GPIO_Init();
     MX_DMA_Init();
-    MX_ADC1_Init();
+   
     MX_I2C1_Init();
     MX_TIM1_Init();
     MX_TIM2_Init();
@@ -23,6 +23,8 @@ void SystemManager::init()
     // printf("Hello from printf!\n");
     // OLED_ShowString(0, 0, "Hello from i2c!", 8);
     // HAL_UART_Transmit(&huart2, (uint8_t *)"Hello from UART!\n", 17, HAL_MAX_DELAY);
+    for (auto *mod : activeModules)
+        mod->init();
 }
 
 void SystemManager::loop()
