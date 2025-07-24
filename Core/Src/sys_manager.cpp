@@ -33,9 +33,10 @@ void SystemManager::loop()
     for (auto *mod : activeModules)
         mod->loop();
 }
-void SystemManager::add(Module *mod)
+SystemManager& SystemManager::add(Module *mod)
 {
     activeModules.push_back(mod);
+    return *this;
 }
 SystemManager::~SystemManager()
 {

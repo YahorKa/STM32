@@ -12,9 +12,8 @@
 
 #include "sys_manager.h"
 #include "module_adc.h"
-#include "sensor_temperature_KTY81.h"
 #include "internal_sensor.h"
-
+#include "MPU6050.h"
 
 #define isblink 1
 #define DMAdemo 0
@@ -120,7 +119,7 @@ int main(void)
   HAL_ADC_MspInit(&hadc1);
 #endif
   /* USER CODE END SysInit */
-  sys_manager.add(new InternalSensor()); // change to uniq
+  sys_manager.add(new InternalSensor()).add(new MPU6050()); // change to uniq
   sys_manager.init();
   
 #if (DMAdemo)

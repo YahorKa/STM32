@@ -9,7 +9,7 @@ void InternalSensor::init()
 
 void InternalSensor::loop()
 {
-    println("internalTemp = %f", readPhysical());
+    println("Core temp (%f)", readPhysical());
 }
 
 float InternalSensor::readRaw()

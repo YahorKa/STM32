@@ -51,6 +51,14 @@
     "streambuf": "cpp",
     "typeinfo": "cpp",
     "variant": "cpp",
-    "__verbose_abort": "cpp"
+    "__verbose_abort": "cpp",
+    "__assert": "cpp",
+    "__availability": "cpp",
+    "__config": "cpp",
+    "chrono": "cpp",
+    "condition_variable": "cpp",
+    "mutex": "cpp",
+    "stop_token": "cpp",
+    "thread": "cpp"
   }
 }

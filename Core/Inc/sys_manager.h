@@ -8,7 +8,7 @@ public:
     ~SystemManager();
     void init();
     void loop();
-    void add(Module*);
+    SystemManager& add(Module*);
 private:
     std::vector<Module*> activeModules;
 };
