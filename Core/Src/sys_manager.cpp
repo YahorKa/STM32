@@ -31,7 +31,7 @@ void SystemManager::loop()
 {
     //HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
     for (auto *mod : activeModules)
-        mod->loop();
+        mod->loop(mod->frequency());
 }
 SystemManager& SystemManager::add(Module *mod)
 {

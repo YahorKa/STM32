@@ -23,6 +23,13 @@ public:
     virtual ~Module() = default;
     virtual void init() = 0;
     virtual void loop() = 0;
+    virtual void loop(const uint32_t&) final;
+    virtual uint32_t frequency() const = 0;
+
+private:
+    uint32_t _frequency;
+protected:
+    uint32_t _last_seen;
     //virtual void print_uart(std::string_view text);
 };
 

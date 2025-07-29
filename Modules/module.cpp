@@ -12,3 +12,15 @@ extern "C" int __io_putchar(int ch) {
     return ch;
 }
 
+
+void Module::loop(const uint32_t& freq)
+{
+    if (freq == 0) return;
+    uint32_t now = HAL_GetTick();
+    if (now > (_last_seen + 1000/freq))
+    {
+        _last_seen = now;
+       loop();
+    }
+    
+}

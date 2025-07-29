@@ -9,6 +9,7 @@ void MPU6050::init()
 
 void MPU6050::loop()
 {
+    _last_seen = HAL_GetTick();
     if (!ready)
     {
         if (HAL_I2C_IsDeviceReady(&hi2c1, MPU_ADDR, 3, 100) == HAL_OK)
@@ -19,12 +20,15 @@ void MPU6050::loop()
         else
         {
             printf("not connected MPU6050\r\n");
+            ready = false;
             wake_up();
         }
     }
     else
     {
         println("IMU temp (%f)", getTemperature());
+        println("loop ms MPU (%d)", HAL_GetTick() - _last_seen);
+
         const auto accel = getAccel();
         println("Accel (g): x=%.2f y=%.2f z=%.2f", accel.x, accel.y, accel.z);
         auto gyro = getGyro();
@@ -42,8 +46,9 @@ float MPU6050::getTemperature()
 {
     uint8_t temp_raw[2];
     HAL_I2C_Mem_Read(&hi2c1, MPU_ADDR, 0x41, 1, temp_raw, 2, 100);
-    int16_t temp_value = (temp_raw[0] << 8) | temp_raw[1];
-    return (temp_value / 340.0f) + 36.53f;
+    _temperature = (temp_raw[0] << 8) | temp_raw[1]; // raw temperature
+    _temperature = (_temperature / 340.0f) + 36.53f; // C temperature
+    return _temperature;
 }
 
 MPU6050::AccelData MPU6050::getAccel()
@@ -57,9 +62,9 @@ MPU6050::AccelData MPU6050::getAccel()
     };
 
     return {
-        to_i16(raw[0], raw[1]) / ACCEL_SENSITIVITY,
-        to_i16(raw[2], raw[3]) / ACCEL_SENSITIVITY,
-        to_i16(raw[4], raw[5]) / ACCEL_SENSITIVITY};
+        filterEMA(_accel.x, (to_i16(raw[0], raw[1]) / ACCEL_SENSITIVITY)),
+        filterEMA(_accel.x, (to_i16(raw[2], raw[3]) / ACCEL_SENSITIVITY)),
+        filterEMA(_accel.x, ( to_i16(raw[4], raw[5]) / ACCEL_SENSITIVITY))};
 }
 
 MPU6050::GyroData MPU6050::getGyro()

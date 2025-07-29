@@ -121,7 +121,7 @@ int main(void)
   /* USER CODE END SysInit */
   sys_manager.add(new InternalSensor()).add(new MPU6050()); // change to uniq
   sys_manager.init();
-  
+
 #if (DMAdemo)
   const uint8_t b = 0x00;
   OLED_ShowString(0, 0, "Hello, World!", 8);
@@ -149,7 +149,8 @@ int main(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   while (1)
   {
-    frequency(2);
+  // adjust freauency of main loop
+    //frequency(300);
     sys_manager.loop();
 #if (isblink)
     // HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);

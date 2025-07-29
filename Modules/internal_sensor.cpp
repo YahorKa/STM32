@@ -10,6 +10,7 @@ void InternalSensor::init()
 void InternalSensor::loop()
 {
     println("Core temp (%f)", readPhysical());
+    println("loop ms intemp (%d)", HAL_GetTick() - _last_seen);
 }
 
 float InternalSensor::readRaw()
@@ -26,7 +27,6 @@ float InternalSensor::readPhysical()
     float adc_value = readRaw();
     float v_sense = (adc_value / 4095.0f) * 3.3f;
 
-    // Примерная формула для STM32F1
     float temperature = ((1.43f - v_sense) / 0.0043f) + 25.0f;
     return temperature;
 }

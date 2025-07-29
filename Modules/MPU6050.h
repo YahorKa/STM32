@@ -19,22 +19,22 @@ public:
     float getTemperature();
     AccelData getAccel();
     GyroData getGyro();
-
+    virtual uint32_t frequency() const override {return 30;}
 private:
     static constexpr float ACCEL_SENSITIVITY = 16384.0f; // ±2g
     static constexpr float GYRO_SENSITIVITY = 131.0f;    // Для ±250°/s
 
     void wake_up();
     bool ready = {false};
-
+    uint16_t _temperature;
     struct AccelData
     {
         float x, y, z;
-    };
+    } _accel;
     struct GyroData
     {
         float x, y, z;
-    };
+    } _gyro;
 };
 
 #endif //  MPU6050_H
