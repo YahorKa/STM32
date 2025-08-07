@@ -10,10 +10,6 @@ void Module_ADC::loop()
 {
     //
     println("adc val  %f ", readRaw());
-   // println("HAL TICK %d \n", HAL_GetTick());
-    // print_uart("print uart");
-    //::print_uart("print %f uart",2.0);
-
 }
 
 float Module_ADC::readRaw()

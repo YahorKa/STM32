@@ -13,7 +13,7 @@ public:
     virtual float readRaw();
     virtual float readPhysical();
 private:
-
+    static uint32_t count_loop;
 };
 
 #endif //INTERNAL_SENSOR

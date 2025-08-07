@@ -10,6 +10,7 @@ void MPU6050::init()
 void MPU6050::loop()
 {
     _last_seen = HAL_GetTick();
+    count_loop ++;
     if (!ready)
     {
         if (HAL_I2C_IsDeviceReady(&hi2c1, MPU_ADDR, 3, 100) == HAL_OK)
@@ -26,14 +27,16 @@ void MPU6050::loop()
     }
     else
     {
-        println("IMU temp (%f)", getTemperature());
-        println("loop ms MPU (%d)", HAL_GetTick() - _last_seen);
-
+        
         const auto accel = getAccel();
-        println("Accel (g): x=%.2f y=%.2f z=%.2f", accel.x, accel.y, accel.z);
         auto gyro = getGyro();
-        println("Gyro (raw): x=%f y=%f z=%f", gyro.x, gyro.y, gyro.z);
+        // println("IMU temp (%f)", getTemperature());
+        // println("Accel (g): x=%.2f y=%.2f z=%.2f", accel.x, accel.y, accel.z);
+        // println("Gyro (raw): x=%f y=%f z=%f", gyro.x, gyro.y, gyro.z);
+        println("loop ms IMU (%d)", HAL_GetTick() - _last_seen);
+        
     }
+    println("MPU6050 lloops (%d)", count_loop);
 }
 
 void MPU6050::wake_up()
@@ -82,3 +85,5 @@ MPU6050::GyroData MPU6050::getGyro()
         to_i16(raw[2], raw[3]) / GYRO_SENSITIVITY,
         to_i16(raw[4], raw[5]) / GYRO_SENSITIVITY};
 }
+
+ uint32_t MPU6050::count_loop = 0;

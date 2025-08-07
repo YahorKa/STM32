@@ -9,8 +9,10 @@ void InternalSensor::init()
 
 void InternalSensor::loop()
 {
-    println("Core temp (%f)", readPhysical());
+    count_loop++;
+    // println("Core temp (%f)", readPhysical());
     println("loop ms intemp (%d)", HAL_GetTick() - _last_seen);
+    println("InternalSensor lloops (%d)", count_loop);
 }
 
 float InternalSensor::readRaw()
@@ -30,3 +32,5 @@ float InternalSensor::readPhysical()
     float temperature = ((1.43f - v_sense) / 0.0043f) + 25.0f;
     return temperature;
 }
+
+ uint32_t InternalSensor::count_loop = 0;

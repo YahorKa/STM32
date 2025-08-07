@@ -19,8 +19,8 @@ void Module::loop(const uint32_t& freq)
     uint32_t now = HAL_GetTick();
     if (now > (_last_seen + 1000/freq))
     {
+        loop();
         _last_seen = now;
-       loop();
     }
     
 }

@@ -4,12 +4,15 @@
  */
 
 #include "main.h"
-
+#include <string>
 #include <stdio.h>
+extern "C" {
 #include "screen.h"
+}
+
+
 #include "ws2812.h"
 #include "imu.h"
-
 #include "sys_manager.h"
 #include "module_adc.h"
 #include "internal_sensor.h"
@@ -121,7 +124,9 @@ int main(void)
   /* USER CODE END SysInit */
   sys_manager.add(new InternalSensor()).add(new MPU6050()); // change to uniq
   sys_manager.init();
-
+  // TO DO Screen module
+  OLED_Init();
+  OLED_Clear();
 #if (DMAdemo)
   const uint8_t b = 0x00;
   OLED_ShowString(0, 0, "Hello, World!", 8);
@@ -152,6 +157,10 @@ int main(void)
   // adjust freauency of main loop
     //frequency(300);
     sys_manager.loop();
+    std::string text = "seconds from start (" + std::to_string(HAL_GetTick()/1000) + ")";
+    
+OLED_ShowString(0, 0, const_cast<char*>(text.c_str()), text.size());
+OLED_ShowString(0, 0, "const_cast<char*>(text.c_str())", 15);
 #if (isblink)
     // HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
