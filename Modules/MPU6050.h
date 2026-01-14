@@ -10,6 +10,7 @@ constexpr uint8_t MPU_ADDR = 0x68 << 1;
 
 class MPU6050 : public Module // Module_I2C
 {
+#define PWR_MGMT_2 0x6C  // power register
     struct AccelData;
     struct GyroData;
 
@@ -27,7 +28,7 @@ private:
 
     void wake_up();
     bool ready = {false};
-    uint16_t _temperature;
+    float _temperature;
     struct AccelData
     {
         float x, y, z;

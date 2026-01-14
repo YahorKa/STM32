@@ -12,7 +12,7 @@ void SSD1306_WriteCmd(uint8_t cmd)
     uint8_t command[2];
     command[0] = 0x00;
     command[1] = cmd;
-    HAL_I2C_Master_Transmit(&hi2c1, SSD1306_I2C_ADDR, &command[0], 2, 500);
+    HAL_I2C_Master_Transmit(&hi2c2, SSD1306_I2C_ADDR, &command[0], 2, 500);
 }
 
 void SSD1306_WriteData(uint8_t data)
@@ -20,7 +20,7 @@ void SSD1306_WriteData(uint8_t data)
     uint8_t datab[2];
     datab[0] = 0x40;
     datab[1] = data;
-    HAL_I2C_Master_Transmit(&hi2c1, SSD1306_I2C_ADDR, &datab[0], 2, 500);
+    HAL_I2C_Master_Transmit(&hi2c2, SSD1306_I2C_ADDR, &datab[0], 2, 500);
 }
 
 void OLED_Init(void)

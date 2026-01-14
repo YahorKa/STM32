@@ -11,9 +11,12 @@
 void SystemManager::init()
 {
     MX_GPIO_Init();
+    HAL_Delay(100);
     MX_DMA_Init();
-   
+    HAL_Delay(100);
     MX_I2C1_Init();
+    MX_I2C2_Init();
+    HAL_Delay(100);
     MX_TIM1_Init();
     MX_TIM2_Init();
     MX_SPI1_Init();

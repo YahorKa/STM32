@@ -6,6 +6,8 @@
 #include "main.h"
 #include <string>
 #include <stdio.h>
+#include <cmath> 
+#include <memory>
 extern "C" {
 #include "screen.h"
 }
@@ -83,6 +85,8 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+    printf("error handler");
+    break;
   }
 }
 
@@ -95,7 +99,6 @@ void increment(uint8_t *a)
 }
 
 const uint8_t a = 0x4C; // ????
-SystemManager sys_manager;
 // Entry Point
 int main(void)
 {
@@ -122,11 +125,16 @@ int main(void)
   HAL_ADC_MspInit(&hadc1);
 #endif
   /* USER CODE END SysInit */
-  sys_manager.add(new InternalSensor()).add(new MPU6050()); // change to uniq
+  SystemManager sys_manager;
+  std::unique_ptr<MPU6050> mpu = std::make_unique<MPU6050>();
+  sys_manager.add(mpu.get()); // change to uniq
   sys_manager.init();
-  // TO DO Screen module
   OLED_Init();
   OLED_Clear();
+  //MX_I2C2_Init();
+  // TO DO Screen module
+  // OLED_Init();
+  // OLED_Clear();
 #if (DMAdemo)
   const uint8_t b = 0x00;
   OLED_ShowString(0, 0, "Hello, World!", 8);
@@ -155,12 +163,14 @@ int main(void)
   while (1)
   {
   // adjust freauency of main loop
-    //frequency(300);
+    frequency(100);
     sys_manager.loop();
-    std::string text = "seconds from start (" + std::to_string(HAL_GetTick()/1000) + ")";
-    
-OLED_ShowString(0, 0, const_cast<char*>(text.c_str()), text.size());
-OLED_ShowString(0, 0, "const_cast<char*>(text.c_str())", 15);
+    char buf [32];
+    float temp = mpu->getTemperature();
+    sprintf(buf, " = TEMPERATURE =   %.1f C", temp);
+
+   OLED_ShowString(0,0, buf,8);
+
 #if (isblink)
     // HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
