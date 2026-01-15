@@ -1,15 +1,17 @@
 #include "MPU6050.h"
 #include <array>
 
+MPU6050::MPU6050()  {
+   // println("mpu constructor");
+};
+
 void MPU6050::init()
 {
-    MX_I2C1_Init();
     wake_up();
 }
 
 void MPU6050::loop()
 {
-    _last_seen = HAL_GetTick();
     count_loop ++;
     if (!ready)
     {
@@ -44,6 +46,7 @@ void MPU6050::loop()
         int16_t raw_temp = (buffer[0] << 8) | buffer[1];
         _temperature = (raw_temp / 340.0f) + 36.53f;
         println("IMU temp (%f)", _temperature);
+        println("MPU count loop (%d)", count_loop);
         // println("Accel (g): x=%.2f y=%.2f z=%.2f", accel.x, accel.y, accel.z);
         // println("Gyro (raw): x=%f y=%f z=%f", gyro.x, gyro.y, gyro.z);
         

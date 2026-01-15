@@ -12,13 +12,19 @@ extern "C" int __io_putchar(int ch) {
     return ch;
 }
 
-
-void Module::loop(const uint32_t& freq)
+void Module::loop()
 {
-    if (freq == 0) return;
+    //_last_seen = HAL_GetTick();
+    println("Base loop method");
+}
+
+void Module::loop_ms(const int ms)
+{
+    if (ms <= 0) return; // error or assert
     uint32_t now = HAL_GetTick();
-    if (now > (_last_seen + 1000/freq))
+    if (now > (_last_seen + ms))
     {
+        println("(%d) - (%d) (%d)" ,now,_last_seen, (now-_last_seen));
         loop();
         _last_seen = now;
     }

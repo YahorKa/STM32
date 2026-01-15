@@ -6,25 +6,25 @@
 
 
 template<typename... ARGS >
-int println( const char* format, ARGS... args)
+int println( const char* ch, ARGS... args)
 {
-    if (!std::strchr(format, '\n')) {
-        std::string s{format};
+    if (!std::strchr(ch, '\n')) {
+        std::string s{ch};
         s += "\n";
         return printf(s.c_str(), args...);
     }
-    return printf(format, args...);
+    return printf(ch, args...);
 }
 
 
 class Module
 {
 public:
+    Module():_last_seen (0){}
     virtual ~Module() = default;
     virtual void init() = 0;
-    virtual void loop() = 0;
-    virtual void loop(const uint32_t&) final;
-    virtual uint32_t frequency() const = 0;
+    virtual void loop();
+    virtual void loop_ms(const int freq);
 
 private:
     uint32_t _frequency;

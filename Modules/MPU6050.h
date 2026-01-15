@@ -11,32 +11,33 @@ constexpr uint8_t MPU_ADDR = 0x68 << 1;
 class MPU6050 : public Module // Module_I2C
 {
 #define PWR_MGMT_2 0x6C  // power register
-    struct AccelData;
-    struct GyroData;
+    struct AccelData
+    {
+        float x, y, z;
+    };
+    struct GyroData
+    {
+        float x, y, z;
+    };
 
 public:
+    using Module::loop;  // need to see loop with args from base class
+    MPU6050();
     virtual void init() override;
     virtual void loop() override;
     float getTemperature();
     AccelData getAccel();
     GyroData getGyro();
-    virtual uint32_t frequency() const override { return 20; }
 
 private:
     static constexpr float ACCEL_SENSITIVITY = 16384.0f; // ±2g
     static constexpr float GYRO_SENSITIVITY = 131.0f;    // Для ±250°/s
-
+    void* _i2c_bus;
     void wake_up();
     bool ready = {false};
     float _temperature;
-    struct AccelData
-    {
-        float x, y, z;
-    } _accel;
-    struct GyroData
-    {
-        float x, y, z;
-    } _gyro;
+    AccelData _accel;
+    GyroData _gyro;
     static uint32_t count_loop;
 };
 

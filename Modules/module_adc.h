@@ -10,7 +10,6 @@ public:
 virtual ~Module_ADC() = default;
     virtual void init() override;
     virtual void loop() override;
-    virtual uint32_t frequency() const override {return 50;}
 
     virtual float readRaw();
     virtual float readPhysical();

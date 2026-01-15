@@ -20,6 +20,15 @@ extern "C" {
 #include "internal_sensor.h"
 #include "MPU6050.h"
 
+#include "adc.h"
+#include "dma.h"
+#include "i2c.h"
+#include "spi.h"
+#include "tim.h"
+#include "usart.h"
+#include "gpio.h"
+
+
 #define isblink 1
 #define DMAdemo 0
 #define isDMA 0
@@ -102,7 +111,6 @@ const uint8_t a = 0x4C; // ????
 // Entry Point
 int main(void)
 {
-  // printf("X");
 
   char buffer[20];
 #if (isDMA)
@@ -125,16 +133,27 @@ int main(void)
   HAL_ADC_MspInit(&hadc1);
 #endif
   /* USER CODE END SysInit */
-  SystemManager sys_manager;
-  std::unique_ptr<MPU6050> mpu = std::make_unique<MPU6050>();
-  sys_manager.add(mpu.get()); // change to uniq
-  sys_manager.init();
+
+    // Initializations
+  MX_GPIO_Init();
+  HAL_Delay(100);
+  MX_DMA_Init();
+  HAL_Delay(100);
+  MX_I2C1_Init();
+  MX_I2C2_Init();
+  HAL_Delay(100);
+  MX_TIM1_Init();
+  MX_TIM2_Init();
+  MX_SPI1_Init();
+  MX_USART2_UART_Init();
+
+  println("initilization ...");
+
   OLED_Init();
   OLED_Clear();
-  //MX_I2C2_Init();
-  // TO DO Screen module
-  // OLED_Init();
-  // OLED_Clear();
+
+  std::unique_ptr<MPU6050> mpu = std::make_unique<MPU6050>();
+  mpu->init();
 #if (DMAdemo)
   const uint8_t b = 0x00;
   OLED_ShowString(0, 0, "Hello, World!", 8);
@@ -162,9 +181,9 @@ int main(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   while (1)
   {
-  // adjust freauency of main loop
-    frequency(100);
-    sys_manager.loop();
+    uint32_t now = HAL_GetTick();
+    //frequency(300);
+    mpu->loop_ms(1000);
     char buf [32];
     float temp = mpu->getTemperature();
     sprintf(buf, " = TEMPERATURE =   %.1f C", temp);
