@@ -1,1 +1,11 @@
 build/*
+.cache/
+Debug/
+Release/
+*.o
+*.d
+*.su
+*.map
+*.elf
+*.bin
+*.hex

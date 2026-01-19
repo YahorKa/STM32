@@ -1,7 +1,7 @@
 #include "MPU6050.h"
 #include <array>
 
-MPU6050::MPU6050()  {
+MPU6050::MPU6050() : ready(false) {
    // println("mpu constructor");
 };
 
@@ -57,6 +57,7 @@ void MPU6050::wake_up()
 {
     uint8_t data = 0x00;
     HAL_I2C_Mem_Write(&hi2c1, MPU_ADDR, 0x6B, 1, &data, 1, 100);
+
 }
 
 float MPU6050::getTemperature()

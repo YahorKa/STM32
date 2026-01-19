@@ -22,11 +22,9 @@ void Module::loop_ms(const int ms)
 {
     if (ms <= 0) return; // error or assert
     uint32_t now = HAL_GetTick();
-    if (now > (_last_seen + ms))
+    if (now >= (_last_seen + ms))
     {
-        println("(%d) - (%d) (%d)" ,now,_last_seen, (now-_last_seen));
         loop();
         _last_seen = now;
     }
-    
 }

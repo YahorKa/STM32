@@ -154,6 +154,11 @@ int main(void)
 
   std::unique_ptr<MPU6050> mpu = std::make_unique<MPU6050>();
   mpu->init();
+
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+
+
+
 #if (DMAdemo)
   const uint8_t b = 0x00;
   OLED_ShowString(0, 0, "Hello, World!", 8);
@@ -181,19 +186,43 @@ int main(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   while (1)
   {
+    char buf [128];
     uint32_t now = HAL_GetTick();
     //frequency(300);
-    mpu->loop_ms(1000);
-    char buf [32];
-    float temp = mpu->getTemperature();
-    sprintf(buf, " = TEMPERATURE =   %.1f C", temp);
+    mpu->loop_ms(100);
 
+    
+    if (!mpu->ready) sprintf(buf, "initialization..");
+    else {
+    sprintf(buf, " = TEMPERATURE =   %.1f C", mpu->getTemperature());
+    }
+    
    OLED_ShowString(0,0, buf,8);
+
+      // Перемещаем серву в 0°
+        htim2.Instance->CCR1 = 500;   // 0.5ms = 0°
+        HAL_Delay(1000);
+        
+        // В 90°
+        htim2.Instance->CCR1 = 1500;  // 1.5ms = 90°
+        HAL_Delay(1000);
+        
+        // В 180°
+        htim2.Instance->CCR1 = 2500;  // 2.5ms = 180°
+        HAL_Delay(1000);
+        
+        // Плавное движение от 0 до 180:
+        for(int angle = 0; angle <= 180; angle += 10) {
+            uint16_t pulse = 500 + (angle * 2000 / 180);
+            htim2.Instance->CCR1 = pulse;
+            HAL_Delay(100);
+        }
+        HAL_Delay(1000);
 
 #if (isblink)
     // HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(500); // задержка в миллисекундах
+    HAL_Delay(100); // задержка в миллисекундах
 
 #endif
 

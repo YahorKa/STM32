@@ -28,13 +28,14 @@ public:
     float getTemperature();
     AccelData getAccel();
     GyroData getGyro();
+    bool ready;
+
 
 private:
     static constexpr float ACCEL_SENSITIVITY = 16384.0f; // ±2g
     static constexpr float GYRO_SENSITIVITY = 131.0f;    // Для ±250°/s
     void* _i2c_bus;
     void wake_up();
-    bool ready = {false};
     float _temperature;
     AccelData _accel;
     GyroData _gyro;
