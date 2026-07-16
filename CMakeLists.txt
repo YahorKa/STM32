@@ -44,7 +44,13 @@ add_subdirectory(cmake/stm32cubemx)
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
-file(GLOB MODULE_SOURCES "${PROJECT_SOURCE_DIR}/Modules/*.cpp")
+
+
+file(GLOB_RECURSE MODULE_SOURCES 
+    "${PROJECT_SOURCE_DIR}/Modules/*.cpp"
+    "${PROJECT_SOURCE_DIR}/Modules/*.c"
+)
+message(STATUS "Found module sources: ${MODULE_SOURCES}")
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here

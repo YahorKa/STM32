@@ -19,6 +19,9 @@ extern "C" {
 #include "module_adc.h"
 #include "internal_sensor.h"
 #include "MPU6050.h"
+#include "sg90.h"
+#include "DTH11.h"
+#include "display_ssd1306.h"
 
 #include "adc.h"
 #include "dma.h"
@@ -27,7 +30,7 @@ extern "C" {
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-
+#include <chrono>
 
 #define isblink 1
 #define DMAdemo 0
@@ -136,43 +139,26 @@ int main(void)
 
     // Initializations
   MX_GPIO_Init();
-  HAL_Delay(100);
   MX_DMA_Init();
-  HAL_Delay(100);
   MX_I2C1_Init();
   MX_I2C2_Init();
-  HAL_Delay(100);
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   MX_SPI1_Init();
   MX_USART2_UART_Init();
-
-  println("initilization ...");
 
   OLED_Init();
   OLED_Clear();
 
-  std::unique_ptr<MPU6050> mpu = std::make_unique<MPU6050>();
-  mpu->init();
-
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-
-
-
-#if (DMAdemo)
-  const uint8_t b = 0x00;
-  OLED_ShowString(0, 0, "Hello, World!", 8);
-  sprintf(buffer, "%08x", &ADC1->DR);
-  OLED_ShowString(0, 1, buffer, 8);
-  sprintf(buffer, "%x", a);
-  OLED_ShowString(0, 2, buffer, 8);
-  sprintf(buffer, "%08x", &a);
-  OLED_ShowString(0, 3, buffer, 8);
-  sprintf(buffer, "%x", b);
-  OLED_ShowString(0, 4, buffer, 8);
-  sprintf(buffer, "%08x", &b);
-  OLED_ShowString(0, 5, buffer, 8);
-#endif
+  //MPU6050 mpu;;
+  //mpu.init();
+  Display_SSD1306 display;
+  display.init();
+  //AL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  ServoSG90 servo;
+  servo.init();
+  DTH11 dth(GPIOB, GPIO_PIN_9);
 
 #if (isPWM)
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -186,45 +172,62 @@ int main(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   while (1)
   {
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+
     char buf [128];
     uint32_t now = HAL_GetTick();
-    //frequency(300);
-    mpu->loop_ms(100);
 
+    // MPU
+    //mpu.loop_ms(50);
+    // if (!mpu.ready) sprintf(buf, "initialization..");
+    // else {
+    //   sprintf(buf, "%.1f C ", mpu.getTemperature());
+    // }
+
+    display.loop_ms(1000);
     
-    if (!mpu->ready) sprintf(buf, "initialization..");
-    else {
-    sprintf(buf, " = TEMPERATURE =   %.1f C", mpu->getTemperature());
+    sprintf(buf,  "%lu:%lu:%lu", now / 1000 / 60 / 60, (now / 1000 / 60) % 60 ,(now / 1000) % 60);
+    display.setCursor( 0, 0);
+    display.drawText(buf);
+
+    display.setCursor(0, 8);
+    snprintf(buf, sizeof(buf), "SYSCLK: %lu MHz", HAL_RCC_GetSysClockFreq() / 1000000);
+    display.drawText(buf);
+
+    if (dth.read()) {
+        // Только если успешно!
+        display.setCursor(0, 16);
+        snprintf(buf, sizeof(buf), "humidity: %.1f %%", dth.get_humidity());
+        display.drawText(buf);
+        
+        display.setCursor(0, 25);
+        snprintf(buf, sizeof(buf), "temp: %.1f C", dth.get_temperature());
+        display.drawText(buf);
+    } else {
+        display.setCursor(0, 16);
+        display.drawText("DHT11 ERROR!");
     }
+    /* Servo TEXT if anable
+    // Перемещаем серву в 0°
+      htim2.Instance->CCR1 = 500;   // 0.5ms = 0°
+      HAL_Delay(1000);
+      
+      // В 90°
+      htim2.Instance->CCR1 = 1500;  // 1.5ms = 90°
+      HAL_Delay(1000);
+      
+      // В 180°
+      htim2.Instance->CCR1 = 2500;  // 2.5ms = 180°
+      HAL_Delay(1000);
+      
+      // Плавное движение от 0 до 180:
+      for(int angle = 0; angle <= 180; angle += 10) {
+          uint16_t pulse = 500 + (angle * 2000 / 180);
+          htim2.Instance->CCR1 = pulse;
+          HAL_Delay(100);
+      }
+  */
     
-   OLED_ShowString(0,0, buf,8);
-
-      // Перемещаем серву в 0°
-        htim2.Instance->CCR1 = 500;   // 0.5ms = 0°
-        HAL_Delay(1000);
-        
-        // В 90°
-        htim2.Instance->CCR1 = 1500;  // 1.5ms = 90°
-        HAL_Delay(1000);
-        
-        // В 180°
-        htim2.Instance->CCR1 = 2500;  // 2.5ms = 180°
-        HAL_Delay(1000);
-        
-        // Плавное движение от 0 до 180:
-        for(int angle = 0; angle <= 180; angle += 10) {
-            uint16_t pulse = 500 + (angle * 2000 / 180);
-            htim2.Instance->CCR1 = pulse;
-            HAL_Delay(100);
-        }
-        HAL_Delay(1000);
-
-#if (isblink)
-    // HAL_UART_Transmit(&huart2, (uint8_t *)"Blink!\n", 17, HAL_MAX_DELAY);
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(100); // задержка в миллисекундах
-
-#endif
 
 #if (isDMA)
     OLED_ShowString(0, 0, "Data A", 8);
@@ -289,6 +292,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }

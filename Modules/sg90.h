@@ -1,15 +1,12 @@
-#ifndef SG90_H
-#define SG90_h
+#pragma once
 #include "module.h"
-
+#include "tim.h" 
 class ServoSG90 : public Module
 {
 public:
-    virtual void init(){};
 
+    virtual void init() override;
+    virtual void loop() override;
 private:
-
-}
-
-
-#endif
+ using Module::loop_ms;
+};

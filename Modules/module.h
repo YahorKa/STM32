@@ -24,7 +24,7 @@ public:
     virtual ~Module() = default;
     virtual void init() = 0;
     virtual void loop();
-    virtual void loop_ms(const int freq);
+    virtual void loop_ms(const int freq) final;
 
 private:
     uint32_t _frequency;
