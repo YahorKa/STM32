@@ -63,7 +63,7 @@ typedef struct
   IWDG_InitTypeDef             Init;       /*!< IWDG required parameters */
 } IWDG_HandleTypeDef;
 
-
+//extern IWDG_HandleTypeDef hiwdg;
 /**
   * @}
   */

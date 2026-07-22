@@ -59,7 +59,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     "${PROJECT_SOURCE_DIR}/Core/Src/imu.c"
     "${PROJECT_SOURCE_DIR}/Core/Src/adc.c"
     "${MODULE_SOURCES}"
-    "${PROJECT_SOURCE_DIR}/Core/Src/sys_manager.cpp"
 
 )
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

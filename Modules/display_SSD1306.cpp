@@ -151,11 +151,32 @@ void Display_SSD1306::drawTextCenter(const char* s, uint8_t size) {
         drawText(line);
     }
 }
+// Рисуем иконку размером 16x16 по координатам x, y
+void Display_SSD1306::drawIcon16(int x, int y, const unsigned char* icon) {
+    // Проверка выхода за границы
+    if (x < 0 || x > FrameBuffer::WIDTH - 16) return;
+    if (y < 0 || y > FrameBuffer::HEIGHT - 16) return;
+    
+    int page = y / 8;      // Страница для верхней половины
+    int page2 = page + 1;  // Страница для нижней половины (y+8)
+    
+    for (int col = 0; col < 16; col++) {
+        // Верхняя половина (строки 0-7)
+        buffer.data[page][x + col] = icon[col];
+        // Нижняя половина (строки 8-15)
+        buffer.data[page2][x + col] = icon[col + 16];
+    }
+    
+    // Помечаем страницы для обновления
+    buffer.needUpdate[page] = true;
+    buffer.needUpdate[page2] = true;
+}
 
 void Display_SSD1306::clear()
 {
-   buffer.clear();
-   _position = {};
+    buffer.clear();
+    _position = {};
+
 }
 void Display_SSD1306::update(){
 
@@ -170,8 +191,5 @@ void Display_SSD1306::update(){
 
 void Display_SSD1306::loop() {
     update();
-    if (_position.x >= 127 || _position.page > 7) {
-        clear();
-    }
 }
 

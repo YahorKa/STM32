@@ -20,20 +20,23 @@ struct FrameBuffer {
     static constexpr int WIDTH = 128;
     uint8_t data[PAGES][WIDTH]; 
     bool needUpdate[PAGES];
-    FrameBuffer(){
-      clear();
-    }
+    FrameBuffer()
+      {
+        clear();
+      }
 
-    inline uint8_t& at(int page, int col) {
-      return data[page][col];
-    }
-    void clear(){
-        memset(data, 0, sizeof(data));
-        setNeedUpdate();
-    }
-    inline void setNeedUpdate() {
-      std::fill(std::begin(needUpdate), std::end(needUpdate), true);
-    }
+      inline uint8_t& at(int page, int col) {
+        return data[page][col];
+      }
+      void clear(){
+          memset(data, 0, sizeof(data));
+          setNeedUpdate();
+      }
+      inline void setNeedUpdate() {
+        for (int i = 0; i < PAGES; ++i) {
+          needUpdate[i] = true;
+      }
+      }
   };
 class Display_SSD1306 : public Module {
 public:
@@ -50,6 +53,7 @@ public:
   void drawChar(char , uint8 = 8);
   void drawText(const char *s,uint8 = 8);
   void drawTextCenter(const char* s, uint8_t size = 8);
+  void drawIcon16(int x, int y, const unsigned char* icon);
 
 
   void update();
@@ -68,31 +72,3 @@ private:
 };
 
 #endif
-
-/*
-  SendCommand(0xAE);  // Display OFF
-    SendCommand(0xD5);  // Set oscillator frequency
-    SendCommand(0x80);
-    SendCommand(0xA8);  // Set multiplex ratio
-    SendCommand(0x3F);  // 64 lines
-    SendCommand(0xD3);  // Set display offset
-    SendCommand(0x00);
-    SendCommand(0x40);  // Set start line
-    SendCommand(0x8D);  // Charge pump
-    SendCommand(0x14);  // Enable
-    SendCommand(0x20);  // Memory mode
-    SendCommand(0x00);  // Horizontal
-    SendCommand(0xA1);  // Segment remap
-    SendCommand(0xC8);  // COM scan direction
-    SendCommand(0xDA);  // COM pins hardware config
-    SendCommand(0x12);
-    SendCommand(0x81);  // Set contrast
-    SendCommand(0xCF);  // Max contrast
-    SendCommand(0xD9);  // Pre-charge period
-    SendCommand(0xF1);
-    SendCommand(0xDB);  // VCOM detect
-    SendCommand(0x40);
-    SendCommand(0xA4);  // Display all on resume
-    SendCommand(0xA6);  // Normal display (не инвертированный)
-    SendCommand(0x2E);  // Deactivate scroll
-    SendCommand(0xAF);  // Display ON*/

@@ -22,6 +22,11 @@ class Module
 public:
     Module():_last_seen (0){}
     virtual ~Module() = default;
+    Module(const Module&) = delete;
+    Module(const Module&&) = delete;
+    Module& operator = (const Module&) = delete;
+    Module& operator = (const Module&&) = delete;
+
     virtual void init() = 0;
     virtual void loop();
     virtual void loop_ms(const int freq) final;

@@ -8,44 +8,55 @@ DTH11::DTH11(GPIO_TypeDef* port, uint16_t pin) :
     init();
 }
 
-/*
-uint32_t DTH11::getMicros()
-TO DO: HANDLE SysTick->VAL RELOAD CASE
-Mayby use TIM?
-*/
+const char* DTH11::getErrorString() const {
+    switch (_lastError) {
+        case DHT11_Error::OK:                   return "OK";
+        case DHT11_Error::ERR_START_SIGNAL:     return "Start Signal Fail";
+        case DHT11_Error::ERR_NO_RESPONSE_LOW:  return "No LOW Response";
+        case DHT11_Error::ERR_NO_RESPONSE_HIGH: return "No HIGH Response";
+        case DHT11_Error::ERR_BIT_TIMEOUT:      return "Bit Timeout";
+        case DHT11_Error::ERR_CHECKSUM:         return "Checksum Error";
+        case DHT11_Error::ERR_READ_BIT:         return "Read Bit Error";
+        case DHT11_Error::ERR_UNKNOWN:          return "Unknown Error";
+        default:                                return "???";
+    }
+}
+
 uint32_t DTH11::getMicros(){
-    // SysTick считает такты
-    // 1 такт = 1/72 МГц ≈ 13.9 нс
-    return (SysTick->LOAD - SysTick->VAL) * 1000000 / SystemCoreClock;
-    
+    return TIM3->CNT; 
 }
 void DTH11::delayUs(uint32_t us)
 {
-    // SystemCoreClock = 72 000 000 (72 МГц)
-    // 1 секунда = 72 000 000 тактов
-    // 1 микросекунда = 72 такта (при 72 МГц)
-    uint32_t ticks = us * (SystemCoreClock / 1000000) / 4; //  18us
-
-    while (ticks--) {
-        __NOP();  // ← Один такт процессора но 4 такта вместе с  while (ticks--)
+   uint32_t start = TIM3->CNT;
+   while ((TIM3->CNT - start) < us) {
+        __NOP();
     }
 }
 void DTH11::init(){
-
-    setOutputMode() ;
+    setOutputMode();
     setHigh();
+    _lastError = DHT11_Error::OK;
 }
 
 bool DTH11::read()
 {
-    startSignal();
+    _data.fill(0);
+    _lastError = DHT11_Error::OK;
+    setOutputMode();
+    setLow();
+    HAL_Delay(18);
+    setHigh();
+    delayUs(40);
+    
     setInputMode();
+
     // waiting for response (LOW)
     uint16_t timeOut = 1000;
     while (!readPin()){
         delayUs(1);
         if(--timeOut == 0) {
             // doesnt have response -> quit
+            _lastError = DHT11_Error::ERR_NO_RESPONSE_LOW;
             return false;
         }
     }
@@ -55,6 +66,7 @@ bool DTH11::read()
         delayUs(1);
         if(--timeOut == 0) {
             // doesnt have response -> quit
+            _lastError = DHT11_Error::ERR_NO_RESPONSE_HIGH;
             return false;
         }
     }
@@ -62,11 +74,19 @@ bool DTH11::read()
     for (int i = 0 ; i < _data.size(); i++){
         for (int j = 7; j >= 0; j--){
             int bit = readBit();
-            if (bit < 0) return false; 
+            if (bit < 0){
+                if (_lastError == DHT11_Error::OK) {
+                    _lastError = DHT11_Error::ERR_READ_BIT;
+                }
+                return false; 
+            }
             _data[i] |= (bit << j);
         }
     }
-    if (_data[0]+ _data[1] + _data[2] + _data[3]  != _data[4]) return false;
+    if (_data[0]+ _data[1] + _data[2] + _data[3]  != _data[4]){
+        _lastError = DHT11_Error::ERR_CHECKSUM;
+        return false;
+    }
     return true;
 
 }
@@ -77,6 +97,7 @@ int DTH11::readBit()
         delayUs(1);
         if(--timeOut == 0) {
             // doesnt have response -> quit
+            _lastError = DHT11_Error::ERR_BIT_TIMEOUT;
             return -1;
         }
     }
@@ -86,18 +107,13 @@ int DTH11::readBit()
         delayUs(1);
         if(--timeOut == 0) {
             // doesnt have response -> quit
+            _lastError = DHT11_Error::ERR_BIT_TIMEOUT;
             return -1;
         }
     }
     uint32_t duration = getMicros() - start_us ;
     if (duration > 60) return 1;
     return 0;
-}
-void DTH11::startSignal()
-{
-    setLow();
-    HAL_Delay(18);
-    setHigh();
 }
 
 void DTH11::setOutputMode() {
@@ -113,7 +129,8 @@ void DTH11::setInputMode() {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = _pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(_port, &GPIO_InitStruct);
 }
 

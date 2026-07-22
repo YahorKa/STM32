@@ -31,5 +31,7 @@ void OLED_ShowCN(uint8 x, uint8 y, uint8 index, const char (*matrix)[32]);
 void OLED_ShowEN(uint8 x, uint8 y, uint8 index, const char (*matrix)[16]);
 void OLED_ShowCN_Big(uint8 x, uint8 y, uint8 index, const char (*matrix)[128]);
 void OLED_ShowName(uint8 x, uint8 y, const char (*matrix)[32]);
+extern const unsigned char ICON_HEATER[32];
+extern const unsigned char ICON_FAN[32];
 
 #endif /* __SCREEN_H */

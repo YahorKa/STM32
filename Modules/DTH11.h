@@ -5,29 +5,46 @@
 #include "gpio.h"
 #include <cstdint>
 #include <array>
+
+enum class DHT11_Error : uint8_t {
+    OK = 0,
+    ERR_START_SIGNAL,
+    ERR_NO_RESPONSE_LOW,
+    ERR_NO_RESPONSE_HIGH,
+    ERR_BIT_TIMEOUT,
+    ERR_CHECKSUM,
+    ERR_READ_BIT,
+    ERR_UNKNOWN
+};
 class DTH11 : public Module
 {
 public:
+
+    DHT11_Error getLastError() const { return _lastError; }
+    const char* getErrorString() const; 
     explicit DTH11(GPIO_TypeDef* port, uint16_t pin);
     DTH11(const DTH11&) = delete;
     DTH11& operator = (const DTH11&) = delete;
     virtual void init() override;
-     virtual void loop() override;
+    virtual void loop() override;
     inline void setHigh() {HAL_GPIO_WritePin(_port, _pin, GPIO_PIN_SET);}
     inline void setLow()  {HAL_GPIO_WritePin(_port, _pin, GPIO_PIN_RESET);}
     inline bool readPin() {return HAL_GPIO_ReadPin(_port, _pin) == GPIO_PIN_SET;}
-    inline int readBit();
-    inline float get_temperature() const {return _data[2] + _data[3]  / 256.0f;}
-    inline float get_humidity() const {return _data[0]+_data[1] / 256.0f;}
+    inline int  readBit();
+    inline float get_temperature() const {return _data[2] +  _data[3] * 0.1f;}
+    inline float get_humidity() const {return _data[0]+_data[1] * 0.1f;}
+    uint8_t getTempDec() const { return _data[3]; }
+    uint8_t getTempH() const { return _data[1]; }
 
     bool read();
 
 private:
-    std::array<char, 5> _data;
+    std::array<char, 5> _data = {};
     float _temperature;
     float _humidity;
     GPIO_TypeDef* _port ;
     uint16_t _pin;
+    DHT11_Error _lastError = DHT11_Error::OK;
     void setOutputMode();
     void setInputMode();
     void startSignal();

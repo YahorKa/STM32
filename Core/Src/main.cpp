@@ -4,18 +4,19 @@
  */
 
 #include "main.h"
+#include "stm32f1xx_hal.h"
+#include <cstdint>
 #include <string>
 #include <stdio.h>
 #include <cmath> 
 #include <memory>
+
 extern "C" {
 #include "screen.h"
 }
 
-
 #include "ws2812.h"
 #include "imu.h"
-#include "sys_manager.h"
 #include "module_adc.h"
 #include "internal_sensor.h"
 #include "MPU6050.h"
@@ -32,21 +33,70 @@ extern "C" {
 #include "gpio.h"
 #include <chrono>
 
-#define isblink 1
-#define DMAdemo 0
-#define isDMA 0
-#define isADC 0
-#define isDMA_ADC 0
-#define isPWM 0
-#define isWS2812 0
-#define isIMU 0
-#define isUARTdemo 0
 
-void frequency(int Hz)
+
+// WatchDog
+// TODO move to WDG.h *.c
+struct Watchdog {
+    IWDG_HandleTypeDef hiwdg;
+    
+    Watchdog() {
+        hiwdg.Instance = IWDG;
+        hiwdg.Init.Prescaler = IWDG_PRESCALER_64;
+        hiwdg.Init.Reload = 0xFFF;
+
+    }
+    void init() {HAL_IWDG_Init(&hiwdg);}
+    void feed() {
+        HAL_IWDG_Refresh(&hiwdg);
+    }
+};
+struct Relay
 {
-  uint32_t period_ms = 1000U / Hz;
-  HAL_Delay(period_ms);
-}
+  Relay(GPIO_TypeDef *port, uint16_t pin) : port(port) , pin(pin), workingTimeMs(0), isWorking(0)
+  {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(port, &GPIO_InitStruct);
+  }
+  void setLow(){
+    HAL_GPIO_WritePin(port, pin , GPIO_PIN_RESET);
+    if (!isWorking){
+      isWorking = true;
+      startTime = HAL_GetTick();
+    }
+  }
+
+  void setHight(){
+    HAL_GPIO_WritePin(port, pin , GPIO_PIN_SET);
+    if (isWorking){
+      isWorking = false;
+      workingTimeMs += HAL_GetTick() - startTime;
+    }
+  }
+  std::string getTimeString() const {
+    std::string str;
+    uint32_t sec = workingTimeMs / 1000;
+    uint32_t hours = sec / 3600;
+    uint32_t minutes = (sec % 3600) / 60;
+    uint32_t seconds = sec % 60;
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%02lu:%02lu:%02lu", 
+             sec / 3600, (sec % 3600) / 60, sec % 60);
+    return std::string(buf);
+  }
+
+  uint32_t workingTimeMs;
+  uint32_t startTime;
+  bool isWorking;
+  GPIO_TypeDef *port;
+  uint16_t pin;
+};
+
+
 // Clock
 void SystemClock_Config(void)
 {
@@ -102,28 +152,11 @@ void Error_Handler(void)
   }
 }
 
-void increment(uint8_t *a)
-{
-  for (int i = 0; a[i] != NULL; i++)
-  {
-    a[i]++;
-  }
-}
 
-const uint8_t a = 0x4C; // ????
 // Entry Point
 int main(void)
 {
 
-  char buffer[20];
-#if (isDMA)
-  uint8_t DataA[] = {0x01, 0x02, 0x03, 0x04};
-  uint8_t DataB[] = {0, 0, 0, 0};
-#endif
-
-#if (isADC || isDMA_ADC)
-  uint32_t adcValue;
-#endif
   /* MCU Configuration--------------------------------------------------------*/
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -135,30 +168,36 @@ int main(void)
 #if (isADC || isDMA_ADC)
   HAL_ADC_MspInit(&hadc1);
 #endif
-  /* USER CODE END SysInit */
 
+  //WatchDog
+
+  //IWDG_HandleTypeDef watchDogHandler;
     // Initializations
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_I2C1_Init();
-  MX_I2C2_Init();
+  //MX_I2C2_Init(); // display
   MX_TIM1_Init();
   MX_TIM2_Init();
-  MX_TIM3_Init();
+  MX_TIM3_Init(); // Counter 1 us
   MX_SPI1_Init();
   MX_USART2_UART_Init();
-
-  OLED_Init();
-  OLED_Clear();
 
   //MPU6050 mpu;;
   //mpu.init();
   Display_SSD1306 display;
   display.init();
-  //AL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-  ServoSG90 servo;
-  servo.init();
-  DTH11 dth(GPIOB, GPIO_PIN_9);
+  //ServoSG90 servo;
+  //servo.init();
+  DTH11 dth(GPIOB, GPIO_PIN_1);
+  Watchdog iwdg;
+  iwdg.init();
+  Relay heater(GPIOA, GPIO_PIN_1);
+  heater.setHight();
+  Relay fan(GPIOA, GPIO_PIN_4);
+  fan.setHight();
+
+
 
 #if (isPWM)
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -172,41 +211,53 @@ int main(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   while (1)
   {
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 
     char buf [128];
     uint32_t now = HAL_GetTick();
+    display.clear();
 
-    // MPU
-    //mpu.loop_ms(50);
-    // if (!mpu.ready) sprintf(buf, "initialization..");
-    // else {
-    //   sprintf(buf, "%.1f C ", mpu.getTemperature());
-    // }
-
-    display.loop_ms(1000);
-    
-    sprintf(buf,  "%lu:%lu:%lu", now / 1000 / 60 / 60, (now / 1000 / 60) % 60 ,(now / 1000) % 60);
+    sprintf(buf, "%02lu:%02lu:%02lu", (now/1000/3600)%24, (now/1000/60)%60, (now/1000)%60);
     display.setCursor( 0, 0);
     display.drawText(buf);
-
     display.setCursor(0, 8);
-    snprintf(buf, sizeof(buf), "SYSCLK: %lu MHz", HAL_RCC_GetSysClockFreq() / 1000000);
+    
+    snprintf(buf, sizeof(buf), "Heat. worked %s",heater.getTimeString().c_str());
     display.drawText(buf);
-
-    if (dth.read()) {
-        // Только если успешно!
+    if (dth.getLastError() == DHT11_Error::OK) {
+        display.setCursor(0, 24);
+        snprintf(buf, sizeof(buf), "Temp: %.1f C", dth.get_temperature());
+        display.drawText(buf);
+      
         display.setCursor(0, 16);
-        snprintf(buf, sizeof(buf), "humidity: %.1f %%", dth.get_humidity());
+        snprintf(buf, sizeof(buf), "Hum:  %.1f %%", dth.get_humidity());
         display.drawText(buf);
-        
-        display.setCursor(0, 25);
-        snprintf(buf, sizeof(buf), "temp: %.1f C", dth.get_temperature());
-        display.drawText(buf);
+        if (dth.get_humidity() > 85){
+          display.drawIcon16(25, 48, ICON_HEATER);
+          display.drawIcon16(88, 48, ICON_FAN);
+          heater.setLow();
+          fan.setLow();
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+        } else if(dth.get_humidity() < 80){
+          heater.setHight();
+          fan.setHight();
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+        }
     } else {
+        // 
         display.setCursor(0, 16);
-        display.drawText("DHT11 ERROR!");
+        snprintf(buf, sizeof(buf), "ERR: %s", dth.getErrorString());
+        display.drawText(buf);
     }
+    // CHECK WATCHDOG
+    // if (now > 30000 ){
+    //   while(1){
+
+    //   };
+    // }
+    display.loop_ms(1000);
+    dth.loop_ms(2000);
+    iwdg.feed();
     /* Servo TEXT if anable
     // Перемещаем серву в 0°
       htim2.Instance->CCR1 = 500;   // 0.5ms = 0°
@@ -228,71 +279,15 @@ int main(void)
       }
   */
     
-
-#if (isDMA)
-    OLED_ShowString(0, 0, "Data A", 8);
-    sprintf(buffer, "ADDR: %02x", &DataA);
-    OLED_ShowString(0, 1, buffer, 8);
-    sprintf(buffer, "%02x %02x %02x %02x", DataA[0], DataA[1], DataA[2], DataA[3]);
-    OLED_ShowString(0, 2, buffer, 8);
-    // start DMA transfer
-    HAL_DMA_Start(&hdma_memtomem_dma1_channel2, (uint32_t)DataA, (uint32_t)DataB, 4);
-    // wait for DMA transfer complete
-    while (HAL_DMA_PollForTransfer(&hdma_memtomem_dma1_channel2, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY) != HAL_OK)
-      ;
-    // after DMA transfer
-    OLED_ShowString(0, 3, "Data B", 8);
-    sprintf(buffer, "ADDR: %02x", &DataB);
-    OLED_ShowString(0, 4, buffer, 8);
-    sprintf(buffer, "%02x %02x %02x %02x", DataB[0], DataB[1], DataB[2], DataB[3]);
-    OLED_ShowString(0, 5, buffer, 8);
-    increment(DataA);
-#endif
-
-#if (isADC)
-    HAL_ADC_Start(&hadc1);
-    while (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY))
-      ;
-    adcValue = HAL_ADC_GetValue(&hadc1);
-    OLED_ShowString(0, 0, "ADC Value", 8);
-    sprintf(buffer, "%d", adcValue);
-    OLED_ShowString(0, 1, buffer, 8);
-#endif
-
-/* DMA ADC begin */
-#if (isDMA_ADC)
-    HAL_ADC_Start_DMA(&hadc1, &adcValue, 1);
-    OLED_ShowString(0, 0, "ADC Value", 8);
-    adcValue = (adcValue & 0x0000FFFF);
-    sprintf(buffer, "%04d", adcValue);
-    OLED_ShowString(0, 1, buffer, 8);
-#endif
-
-#if (isPWM)
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&TIM1->CCR1, 1);
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&TIM1->CCR2, 1);
-#endif
-
-#if (isWS2812)
-    // ws2812_example();
-    ws2812_test();
-#endif
-
-#if (isIMU)
-    ADXL345_Test();
-#endif
-
-#if (isUARTdemo)
-    if (HAL_UART_Receive(&huart2, (uint8_t *)buffer, 1, HAL_MAX_DELAY) == HAL_OK)
-    {
-      HAL_UART_Transmit(&huart2, (uint8_t *)buffer, 1, HAL_MAX_DELAY);
-      HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n\r", 1, HAL_MAX_DELAY);
-    }
-#endif
-    /* USER CODE END WHILE */
+    // MPU
+    //mpu.loop_ms(50);
+    // if (!mpu.ready) sprintf(buf, "initialization..");
+    // else {
+    //   sprintf(buf, "%.1f C ", mpu.getTemperature());
+    // }
 
     /* USER CODE BEGIN 3 */
-    HAL_Delay(100);
+    HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
