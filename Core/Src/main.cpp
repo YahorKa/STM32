@@ -190,13 +190,12 @@ int main(void)
   //ServoSG90 servo;
   //servo.init();
   DTH11 dth(GPIOB, GPIO_PIN_1);
-  Watchdog iwdg;
-  iwdg.init();
   Relay heater(GPIOA, GPIO_PIN_1);
   heater.setHight();
   Relay fan(GPIOA, GPIO_PIN_4);
   fan.setHight();
-
+  Watchdog iwdg;
+  iwdg.init();
 
 
 #if (isPWM)
@@ -217,7 +216,7 @@ int main(void)
     uint32_t now = HAL_GetTick();
     display.clear();
 
-    sprintf(buf, "%02lu:%02lu:%02lu", (now/1000/3600)%24, (now/1000/60)%60, (now/1000)%60);
+    sprintf(buf, "%02lu:%02lu:%02lu         v1.0", (now/1000/3600)%24, (now/1000/60)%60, (now/1000)%60);
     display.setCursor( 0, 0);
     display.drawText(buf);
     display.setCursor(0, 8);

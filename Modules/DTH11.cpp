@@ -51,6 +51,7 @@ bool DTH11::read()
     setInputMode();
 
     // waiting for response (LOW)
+    // TODO Rewrite oll timeouts!
     uint16_t timeOut = 1000;
     while (!readPin()){
         delayUs(1);
@@ -60,7 +61,7 @@ bool DTH11::read()
             return false;
         }
     }
-    timeOut = 1000;
+    timeOut = 5000;
     //waiting for hight
     while (readPin()){
         delayUs(1);
@@ -135,6 +136,15 @@ void DTH11::setInputMode() {
 }
 
  void DTH11::loop(){
+    static uint8_t ErrorCount = 0;
+    if (_lastError == DHT11_Error::OK){
+        ErrorCount = 0;
+    } else {
+        if (ErrorCount > 10) {
+            ErrorCount = 0;
+            //Reload
+        } else ErrorCount++;
+    }
     _data.fill(0);
     read();
  }
