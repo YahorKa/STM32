@@ -1,9 +1,11 @@
 #include "DTH11.h"
 #include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_gpio.h"
 #include <cstdint>
 
-DTH11::DTH11(GPIO_TypeDef* port, uint16_t pin) :
-     _port(port), _pin(pin)
+// TO DO: MAKE THE PIN A SINGLE CLASS INSTEAD OF "GPIO_TypeDef* port, uint16_t data_pin"
+DTH11::DTH11(GPIO_TypeDef* port, uint16_t data_pin, GPIO_TypeDef* vcc_port, uint16_t vcc_pin) :
+     _data_port(port), _data_pin(data_pin), _vcc_port(vcc_port), _vcc_pin(vcc_pin)
 {
     init();
 }
@@ -18,6 +20,7 @@ const char* DTH11::getErrorString() const {
         case DHT11_Error::ERR_CHECKSUM:         return "Checksum Error";
         case DHT11_Error::ERR_READ_BIT:         return "Read Bit Error";
         case DHT11_Error::ERR_UNKNOWN:          return "Unknown Error";
+        case DHT11_Error::ERR_NOVCC:            return "No VCC";
         default:                                return "???";
     }
 }
@@ -33,6 +36,18 @@ void DTH11::delayUs(uint32_t us)
     }
 }
 void DTH11::init(){
+    if (_vcc_port && _vcc_pin){
+        GPIO_InitTypeDef GPIO_InitStruct = {0};
+        GPIO_InitStruct.Pin = _vcc_pin;
+        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        HAL_GPIO_Init(_vcc_port, &GPIO_InitStruct);
+        HAL_GPIO_WritePin(_vcc_port, _vcc_pin, GPIO_PIN_SET);
+
+        // wait on cold start for 1000
+        HAL_Delay(1000); 
+    } else (_lastError = DHT11_Error::ERR_NOVCC) ;
     setOutputMode();
     setHigh();
     _lastError = DHT11_Error::OK;
@@ -44,7 +59,7 @@ bool DTH11::read()
     _lastError = DHT11_Error::OK;
     setOutputMode();
     setLow();
-    HAL_Delay(18);
+    HAL_Delay(20);
     setHigh();
     delayUs(40);
     
@@ -52,7 +67,7 @@ bool DTH11::read()
 
     // waiting for response (LOW)
     // TODO Rewrite oll timeouts!
-    uint16_t timeOut = 1000;
+    uint16_t timeOut = 5000;
     while (!readPin()){
         delayUs(1);
         if(--timeOut == 0) {
@@ -119,32 +134,45 @@ int DTH11::readBit()
 
 void DTH11::setOutputMode() {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = _pin;
+    GPIO_InitStruct.Pin = _data_pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(_port, &GPIO_InitStruct);
+    HAL_GPIO_Init(_data_port, &GPIO_InitStruct);
 }
 
 void DTH11::setInputMode() {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = _pin;
+    GPIO_InitStruct.Pin = _data_pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(_port, &GPIO_InitStruct);
+    HAL_GPIO_Init(_data_port, &GPIO_InitStruct);
 }
 
- void DTH11::loop(){
-    static uint8_t ErrorCount = 0;
-    if (_lastError == DHT11_Error::OK){
-        ErrorCount = 0;
-    } else {
-        if (ErrorCount > 10) {
-            ErrorCount = 0;
-            //Reload
-        } else ErrorCount++;
+void DTH11::loop(){
+static uint8_t ErrorCount = 0;
+if (_lastError == DHT11_Error::OK){
+    ErrorCount = 0;
+} else {
+    if (ErrorCount > 5) {
+        //Reload
+        if (hardReset())  ErrorCount = 0;
+    } else ErrorCount++;
+}
+_data.fill(0);
+read();
+}
+
+bool DTH11::hardReset()
+{
+   // Power off and init
+   if (_vcc_port && _vcc_pin){
+        HAL_GPIO_WritePin(_vcc_port, _vcc_pin, GPIO_PIN_RESET);
+        HAL_Delay(500);
+        init();
+        return true;
     }
-    _data.fill(0);
-    read();
- }
+    // TODO: How to reset if we have no power control
+    return false;
+}

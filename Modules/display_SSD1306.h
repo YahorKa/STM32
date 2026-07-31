@@ -3,8 +3,9 @@
 #include "i2c.h"
 #include "module.h"
 #include <stdint.h>
-
+#ifdef __cplusplus
 extern "C" {
+#endif
 typedef uint8_t uint8;
 void OLED_Init(void);
 void OLED_Clear(void);
@@ -13,7 +14,9 @@ void OLED_ShowChar(uint8 x, uint8 y, uint8 chr, uint8 Char_Size);
 void SSD1306_WriteData(uint8_t data); 
 extern const unsigned char F6x8[][6];
 extern const unsigned char F8X16[];
+#ifdef __cplusplus
 }
+#endif
 struct FrameBuffer {
     static constexpr int PAGES = 8;
     static constexpr int HEIGHT = 64;
