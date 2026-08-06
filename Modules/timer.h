@@ -34,7 +34,6 @@ public:
    template<typename CallableFunc>
    struct Task : TaskBase
    {
-      using TaskBase::execution_time;
       Task(uint32_t time, CallableFunc&& func) 
          : lambda(std::forward<CallableFunc>(func))
       {

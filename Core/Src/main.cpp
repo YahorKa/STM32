@@ -33,7 +33,8 @@ extern "C" {
 #include "usart.h"
 #include "gpio.h"
 #include <chrono>
-
+#include "pin.h"
+#include "eeprom.h"
 
 
 // WatchDog
@@ -45,68 +46,14 @@ struct Watchdog {
         hiwdg.Instance = IWDG;
         hiwdg.Init.Prescaler = IWDG_PRESCALER_64;
         hiwdg.Init.Reload = 0xFFF;
-
+        reset_counter = eeprom_read<decltype(reset_counter)>(WATCHDOG_RESTART);
     }
     void init() {HAL_IWDG_Init(&hiwdg);}
     void feed() {
         HAL_IWDG_Refresh(&hiwdg);
     }
+    uint32_t reset_counter;
 };
-struct PIN
-{
-  PIN(GPIO_TypeDef *port, uint16_t pin) : port(port) , pin(pin), workingTimeMs(0), isWorking(false)
-  {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(port, &GPIO_InitStruct);
-  }
-  bool readState() {
-    return HAL_GPIO_ReadPin(port, pin) == GPIO_PinState::GPIO_PIN_SET;
-  }
-  void setLow(){
-     HAL_GPIO_WritePin(port, pin , GPIO_PIN_RESET);
-    if (isWorking){
-      isWorking = false;
-      workingTimeMs += HAL_GetTick() - startTime;
-    }
-  }
-  void setLowWithDelay(uint16_t min){
-    HAL_GPIO_WritePin(port, pin , GPIO_PIN_RESET);
-    if (!isWorking){
-      isWorking = true;
-      startTime = HAL_GetTick();
-    }
-  }
-
-  void setHight(){
-    HAL_GPIO_WritePin(port, pin , GPIO_PIN_SET);
-    if (!isWorking){
-      isWorking = true;
-      startTime = HAL_GetTick();
-    }
-  }
-  std::string getTimeString() const {
-    std::string str;
-    uint32_t sec = workingTimeMs / 1000;
-    uint32_t hours = sec / 3600;
-    uint32_t minutes = (sec % 3600) / 60;
-    uint32_t seconds = sec % 60;
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%02lu:%02lu:%02lu", 
-             sec / 3600, (sec % 3600) / 60, sec % 60);
-    return std::string(buf);
-  }
-
-  uint32_t workingTimeMs;
-  uint32_t startTime;
-  bool isWorking;
-  GPIO_TypeDef *port;
-  uint16_t pin;
-};
-
 
 // Clock
 void SystemClock_Config(void)
@@ -162,8 +109,12 @@ void Error_Handler(void)
     break;
   }
 }
-
-
+/*
+Global Objects ---
+                  |
+                  \/
+*/
+Display_SSD1306 display;
 // Entry Point
 int main(void)
 {
@@ -195,6 +146,7 @@ int main(void)
   //mpu.init();
     //ServoSG90 servo;
   //servo.init();
+
   DTH11 dth(GPIOB, GPIO_PIN_1, GPIOB, GPIO_PIN_12);
   HAL_Delay(1000);
   PIN heater(GPIOA, GPIO_PIN_1);
@@ -202,7 +154,7 @@ int main(void)
   Watchdog iwdg;
   iwdg.init();
   Timer timer;
-  Display_SSD1306 display;
+  
   display.init();
 
 #if (isPWM)
@@ -241,9 +193,6 @@ int main(void)
         snprintf(buf, sizeof(buf), "Hum:  %.1f %%", dth.get_humidity());
         display.drawText(buf);
         if (dth.get_humidity() > 85){
-          // TODO: add graphic 
-          // display.drawIcon16(25, 48, ICON_HEATER);
-          // display.drawIcon16(88, 48, ICON_FAN);
           if (!heater.isWorking) {
             heater.setHight();
             HAL_Delay(1000);
@@ -255,13 +204,18 @@ int main(void)
         } else if (dth.get_humidity() < 75){ // turn off heater and i want fan working some tine after this (Need Timer)
           if (heater.isWorking) {
             heater.setLow();
-            timer.AddTask(10_s, [&fan]()->void{
+            timer.AddTask(10_m, [&fan]()->void{
               if (fan.isWorking){
                 fan.setLow();
               }
             });
           }
-
+          display.setCursor(0, 40);
+          snprintf(buf, sizeof(buf), "Reset DTH11: %i ", dth.getReset());
+          display.drawText(buf);
+        
+// TODO: add graphic 
+          
           HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
         }
     } else {
@@ -311,7 +265,7 @@ int main(void)
 
 /*
 ╔═══════════════════════════════════════════════════════════════════════════════╗
-║               STM32F103C8T6 (48-pin) - КАРТА ЗАНЯТОСТИ ПИНОВ                ║
+║               STM32F103C8T6 (48-pin) - КАРТА ЗАНЯТОСТИ ПИНОВ                  ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 
                                    3.3V
@@ -319,7 +273,7 @@ int main(void)
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│  PA0  ────┤1 ADC1_IN0├──── 24  PB1  ──── DHT11_DATA (GPIOB_PIN_1)           │
+│  PA0  ────┤1 ADC1_IN0├──── 24 PB1  ──── DHT11_DATA (GPIOB_PIN_1)            │
 │  PA1  ────┤2 HEATER├──── 23   PB0  ──── ВЕНТИЛЯТОР                          │
 │  PA2  ────┤3 UART2_TX├─── 22  PB10 ──── I2C2_SCL (дисплей?)                 │
 │  PA3  ────┤4 UART2_RX├─── 21  PB11 ──── I2C2_SDA (дисплей?)                 │
@@ -344,34 +298,35 @@ int main(void)
                             └─────────────────┘
 
 ╔═══════════════════════════════════════════════════════════════════════════════╗
-║                               ЛЕГЕНДА                                       ║
+║                               ЛЕГЕНДА                                         ║
 ╠═══════════════════════════════════════════════════════════════════════════════╣
-║  ██████  ЗАНЯТ   │  ░░░░░░  СВОБОДЕН  │  ??????  НЕ ИСПОЛЬЗУЕТСЯ          ║
+║  ██████  ЗАНЯТ   │  ░░░░░░  СВОБОДЕН  │  ??????  НЕ ИСПОЛЬЗУЕТСЯ              ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 ╔═══════════════════════════════════════════════════════════════════════════════╗
-║                           ДЕТАЛЬНАЯ ТАБЛИЦА                                 ║
-╠═══════════════════════╦═════════════════════════════════════════════════════╣
-║  ПИН                 ║  ЧТО ЗАНЯТО                                         ║
-╠═══════════════════════╬═════════════════════════════════════════════════════╣
-║  PA1                 ║  HEATER (реле)                                      ║
-║  PA2                 ║  USART2_TX (отладка)                               ║
-║  PA3                 ║  USART2_RX (отладка)                               ║
-║  PA4                 ║  FAN (реле)                                         ║
-║  PA5                 ║  SPI1_SCK                                          ║
-║  PA6                 ║  SPI1_MISO                                         ║
-║  PA7                 ║  SPI1_MOSI                                         ║
-║  PA8                 ║  TIM1_CH1 (PWM)                                    ║
-║  PA9                 ║  TIM1_CH2 (PWM)                                    ║
-║  PA15                ║  TIM2_CH1 (PWM - ремап)                            ║
-╠═══════════════════════╬═════════════════════════════════════════════════════╣
-║  PB1                 ║  DHT11_DATA                                        ║
-║  PB6                 ║  I2C1_SCL                                          ║
-║  PB7                 ║  I2C1_SDA                                          ║
-║  PB10                ║  I2C2_SCL (дисплей)                                ║
-║  PB11                ║  I2C2_SDA (дисплей)                                ║
-║  PB12                ║  DHT11_VCC (управление питанием)                   ║
-╠═══════════════════════╬═════════════════════════════════════════════════════╣
-║  PC13                ║  Встроенный LED                                     ║
-╚═══════════════════════╩═════════════════════════════════════════════════════╝
+║                           ДЕТАЛЬНАЯ ТАБЛИЦА                                   ║
+╠═══════════════════════╦═════════════════════════════════════════════════════  ╣
+║  ПИН                 ║  ЧТО ЗАНЯТО                                            ║
+╠═══════════════════════╬═════════════════════════════════════════════════════  ╣
+║  PA1                 ║  HEATER (реле)                                         ║
+║  PA2                 ║  USART2_TX (отладка)                                   ║
+║  PA3                 ║  USART2_RX (отладка)                                   ║
+║  PA4                 ║  ADXL345                                               ║
+║  PA5                 ║  SPI1_SCK                                              ║
+║  PA6                 ║  SPI1_MISO                                             ║
+║  PA7                 ║  SPI1_MOSI                                             ║
+║  PA8                 ║  TIM1_CH1 (PWM)                                        ║
+║  PA9                 ║  TIM1_CH2 (PWM)                                        ║
+║  PA15                ║  TIM2_CH1 (PWM - ремап)                                ║
+╠═══════════════════════╬═════════════════════════════════════════════════════  ╣
+   PB0                    ВЕНТИЛЯТОР   
+║  PB1                 ║  DHT11_DATA                                            ║
+║  PB6                 ║  I2C1_SCL                                              ║
+║  PB7                 ║  I2C1_SDA                                              ║
+║  PB10                ║  I2C2_SCL (дисплей)                                    ║
+║  PB11                ║  I2C2_SDA (дисплей)                                    ║
+║  PB12                ║  DHT11_VCC (управление питанием)                       ║
+╠═══════════════════════╬═════════════════════════════════════════════════════  ╣
+║  PC13                ║  Встроенный LED                                        ║
+╚═══════════════════════╩═════════════════════════════════════════════════════  ╝
 */

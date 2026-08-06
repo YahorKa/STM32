@@ -2,12 +2,13 @@
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_gpio.h"
 #include <cstdint>
-
+#include <eeprom.h>
 // TO DO: MAKE THE PIN A SINGLE CLASS INSTEAD OF "GPIO_TypeDef* port, uint16_t data_pin"
 DTH11::DTH11(GPIO_TypeDef* port, uint16_t data_pin, GPIO_TypeDef* vcc_port, uint16_t vcc_pin) :
      _data_port(port), _data_pin(data_pin), _vcc_port(vcc_port), _vcc_pin(vcc_pin)
 {
     init();
+    _hard_reset_counter = eeprom_read<decltype(_hard_reset_counter)>(DH11_RESTART);
 }
 
 const char* DTH11::getErrorString() const {
@@ -155,7 +156,7 @@ static uint8_t ErrorCount = 0;
 if (_lastError == DHT11_Error::OK){
     ErrorCount = 0;
 } else {
-    if (ErrorCount > 5) {
+    if (ErrorCount > 2) {
         //Reload
         if (hardReset())  ErrorCount = 0;
     } else ErrorCount++;
@@ -171,6 +172,8 @@ bool DTH11::hardReset()
         HAL_GPIO_WritePin(_vcc_port, _vcc_pin, GPIO_PIN_RESET);
         HAL_Delay(500);
         init();
+        _hard_reset_counter++;
+        eeprom_write(DH11_RESTART, _hard_reset_counter);
         return true;
     }
     // TODO: How to reset if we have no power control

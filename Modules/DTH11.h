@@ -36,13 +36,14 @@ public:
     inline float get_humidity() const {return _data[0]+_data[1] * 0.1f;}
     uint8_t getTempDec() const { return _data[3]; }
     uint8_t getTempH() const { return _data[1]; }
-
+    uint8_t getReset() const { return _hard_reset_counter; }
     bool read();
 
 private:
     std::array<char, 5> _data = {};
     float _temperature;
     float _humidity;
+    uint32_t _hard_reset_counter;
     GPIO_TypeDef* _data_port;
     uint16_t _data_pin;
     GPIO_TypeDef* _vcc_port ;
