@@ -21,7 +21,7 @@ extern "C" {
 #include "internal_sensor.h"
 #include "MPU6050.h"
 #include "sg90.h"
-#include "DTH11.h"
+#include "dth11.h"
 #include "timer.h"
 #include "display_ssd1306.h"
 
@@ -135,7 +135,7 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_I2C1_Init();
-  //MX_I2C2_Init(); // display
+  //MX_I2C2_Init(); // display 
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init(); // Counter 1 us
@@ -181,15 +181,15 @@ int main(void)
     display.setCursor(0, 8);
     snprintf(buf, sizeof(buf), "Heat On %s",heater.getTimeString().c_str());
     display.drawText(buf);
-    display.setCursor(0, 16);
-    snprintf(buf, sizeof(buf), "Fan On %s",fan.getTimeString().c_str());
-    display.drawText(buf);
+    // display.setCursor(0, 16);
+    // snprintf(buf, sizeof(buf), "Fan On %s",fan.getTimeString().c_str());
+    // display.drawText(buf);
     if (dth.getLastError() == DHT11_Error::OK) {
-        display.setCursor(0, 32);
+        display.setCursor(0, 24);
         snprintf(buf, sizeof(buf), "Temp: %.1f C", dth.get_temperature());
         display.drawText(buf);
       
-        display.setCursor(0, 24);
+        display.setCursor(0, 16);
         snprintf(buf, sizeof(buf), "Hum:  %.1f %%", dth.get_humidity());
         display.drawText(buf);
         if (dth.get_humidity() > 85){
@@ -210,9 +210,7 @@ int main(void)
               }
             });
           }
-          display.setCursor(0, 40);
-          snprintf(buf, sizeof(buf), "Reset DTH11: %i ", dth.getReset());
-          display.drawText(buf);
+          
         
 // TODO: add graphic 
           
@@ -224,6 +222,12 @@ int main(void)
         snprintf(buf, sizeof(buf), "ERR: %s", dth.getErrorString());
         display.drawText(buf);
     }
+    display.setCursor(0, 32);
+    snprintf(buf, sizeof(buf), "Reset DTH11: %i ", dth.getReset());
+    display.drawText(buf);
+
+    display.drawRect(1, 40, 125, 24 );
+    display.drawGraph(dth.get_history(), 0, 40, 128, 24);
 
     display.loop_ms(1000);
     dth.loop_ms(2000);

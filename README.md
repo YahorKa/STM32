@@ -1,42 +1,38 @@
-# STM32 Tutorial
+# STM32 Climate Controller (Humidity & Temperature)
 
-This is the repository for the demo presented at the STM32 programming course at NTUEESAAD
+Прошивка для управления микроклиматом на базе STM32F103C8T6 (Blue Pill).  
+Управляет нагревателем и вентилятором по данным с датчика DHT11, отображает информацию на OLED‑дисплее SSD1306, сохраняет статистику во Flash (эмуляция EEPROM) и использует Watchdog для защиты от зависаний.
 
-## How to Build
-1. Clone the repository
+
+## Возможности
+
+- Измерение температуры и влажности** (DHT11)
+- Управление нагревателем и вентилятором** (реле с опторазвязкой)
+- Отображение на OLED 128×64** (SSD1306, I2C)
+- Эмуляция EEPROM во Flash** — сохранение:
+  - Счётчиков перезагрузок (Watchdog, DHT11)
+  - Времени работы нагревателя и вентилятора
+  - Порогов влажности
+- График влажности** (история за сутки / 4 минуты)
+- ⏱Таймер** для отложенного выключения вентилятора
+- Сторожевой таймер (IWDG)** — автосброс при зависании
+- Управление питанием DHT11** (выключение при ошибках)
+- CMake** + ARM GCC + STM32CubeProgrammer
+
+
+---
+
+##  Сборка и прошивка
+
+### 1. Установи зависимости
+
+- **ARM GCC** (`arm-none-eabi-gcc`)
+- **CMake** (>= 3.22)
+- **STM32CubeProgrammer** (для прошивки)
+
+### 2. Сборка
 
 ```bash
-git clone git@github.com:EricLin0123/STM32Tutorial.git
-```
-
-1. Change the directory to the build directory
-
-```bash
-mkdir build; cd build
-```
-3. Compile the code
-
-```bash
+mkdir build && cd build
 cmake ..
-cmake --build .
-```
-4. Flash the following .elf file to the board
-
-```bash
-build/F103Template.elf
-```
-
-## How to use
-In /Core/Src/main.c, define the example you want to run to be `1`. For example if you want to run ADC example:
-```C
-#define isblink 0
-#define DMAdemo 0
-#define isDMA 0
-#define isADC 1
-#define isDMA_ADC
-#define isPWM 0
-#define isWS2812 0
-#define isIMU 0
-#define isUARTdemo 0
-```
-
+make 

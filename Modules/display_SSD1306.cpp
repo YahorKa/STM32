@@ -38,7 +38,7 @@ void Display_SSD1306::drawChar(char chr ,uint8 char_Size)
     uint8 c = chr - ' ';
     switch (char_Size){
     case 8: {
-        if (c > 92) return;
+        if (c > 92) return; // not such symbols at the moment
          if (_position.x > (FrameBuffer::WIDTH - 6)) {
                 _position.x = 0;
                 _position.y += 8;
@@ -188,7 +188,57 @@ void Display_SSD1306::update(){
         }
     }
 }
+void Display_SSD1306::drawRect(int x, int y, int w, int h, bool fill)
+{
+    if (x < 0 || x >= FrameBuffer::WIDTH) return;
+    if (y < 0 || y >= FrameBuffer::HEIGHT) return;
+    if (!fill)
+    {
+        auto width = w;
+        while(width--){
+            if (x >= 0 && x < FrameBuffer::WIDTH && y >= 0 && y < FrameBuffer::HEIGHT) {
+                drawPixel(x, y);
+                drawPixel(x, y + h -1);
+            }
+            x++;
+        }
+        auto height = h;
+        while(height--){
+            if (x >= 0 && x < FrameBuffer::WIDTH && y >= 0 && y < FrameBuffer::HEIGHT) {
+                drawPixel(x, y);
+                drawPixel(x-w, y );
+            }
+            y++;
+        }
+    } else {
+        // NOT SUPPORTED
+    }
+}
 
+void Display_SSD1306::drawLine(int x1, int y1, int x2, int y2, bool on) {
+    // Алгоритм Брезенхема для рисования линии
+    int dx = abs(x2 - x1);
+    int dy = -abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+    int err = dx + dy;
+
+    while (true) {
+        drawPixel(x1, y1, on);
+        if (x1 == x2 && y1 == y2) break;
+        int e2 = 2 * err;
+        if (e2 >= dy) {
+            if (x1 == x2) break;
+            err += dy;
+            x1 += sx;
+        }
+        if (e2 <= dx) {
+            if (y1 == y2) break;
+            err += dx;
+            y1 += sy;
+        }
+    }
+}
 void Display_SSD1306::loop() {
     update();
 }

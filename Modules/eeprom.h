@@ -20,17 +20,27 @@ EEPROM EMULATOR used last flash page
 #define DATA_SIZE    4 // 4 BYTES
 
 // TO DO 
-// struct EEPROM_DATA {...}
+// struct EEPROM_cache; {...}
 
-enum EEPROM_IDs : uint16_t {
+enum EEPROM_IDs : uint8_t {
     RESERV = 0,
     WATCHDOG_RESTART,    // uint32_t
     DH11_RESTART,        // uint32_t
     HEATER_TIME,         // uint32_t
     FAN_TIME,            // uint32_t
-    HUMIDITY_THRESHOLD,  // float
+    HUMIDITY_THRESHOLD,     // float
     TEMPERATURE_THRESHOLD,  // float
     EEPROM_LAST
+};
+struct EEPROM_cache
+{
+    uint32_t reserv;
+    uint32_t wathcdog_restart;
+    uint32_t dh11_restart;
+    uint32_t heater_On_time;
+    uint32_t fan_On_time;
+    uint32_t humidity_threshold;
+    uint32_t temperature_threshold;
 };
 
 extern Display_SSD1306 display;
@@ -39,7 +49,7 @@ private:
     uint32_t startAddr;
     uint32_t endAddr;
     HAL_StatusTypeDef _last_status;
-
+    EEPROM_cache _cache;
     const char* HAL_StatusToString(HAL_StatusTypeDef status) {
         switch (status) {
             case HAL_OK:       return "OK";
@@ -72,12 +82,19 @@ public:
         if (endAddr > END_OF_FLASH) {
             Error_Handler();
         }
+        readCacheFromFlash();
     };
-    template<typename T>
-    HAL_StatusTypeDef WriteEEPROM(EEPROM_IDs id, T value) 
+    void readCacheFromFlash() {
+        uint32_t* flashPtr = (uint32_t*)startAddr;
+        uint32_t* dataPtr = (uint32_t*)&_cache;
+        size_t words = sizeof(_cache) / sizeof(uint32_t);
+        for (size_t i = 0; i < words; i++) {
+            dataPtr[i] = flashPtr[i];
+        }
+    }
+    HAL_StatusTypeDef writeCacheToFlash() 
     {
-        static_assert(sizeof(T) <= 4, "EEPROM supports max 4 bytes");
-        uint32_t adr = startAddr + id * DATA_SIZE;
+        uint32_t last_adr = startAddr + (EEPROM_LAST - 1) * DATA_SIZE;
         HAL_StatusTypeDef res;
          //HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, adr, value);
          // We should erase the memory before write
@@ -96,7 +113,16 @@ public:
           display.drawText(buf);
           return _last_status;
         } else {
-            HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, adr, value);
+            uint32_t* it = (uint32_t*)&_cache;
+            uint32_t* end = it  + sizeof(_cache)/sizeof(uint32_t);
+            for (auto addr = startAddr; it < end ; it++, addr += sizeof(uint32_t)){
+                _last_status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, *it);
+                if (_last_status != HAL_OK) {
+                    HAL_FLASH_Lock();
+                    __enable_irq();
+                    return _last_status;
+                }
+            }
             // no error - ok
         }
         HAL_FLASH_Lock();
@@ -109,12 +135,38 @@ public:
         uint32_t adr = startAddr + id * DATA_SIZE;
         return *(T*)adr;
     }
+
+    void setWatchdogRestart(uint32_t val) { 
+        _cache.wathcdog_restart = val; 
+        writeCacheToFlash(); 
+    }
+    void setDh11Restart(uint32_t val) { 
+        _cache.dh11_restart = val; 
+        writeCacheToFlash(); 
+    }
+    void setHeaterTime(uint32_t val) { 
+        _cache.heater_On_time = val; 
+        writeCacheToFlash(); 
+    }
+    void setFanTime(uint32_t val) { 
+        _cache.fan_On_time = val; 
+        writeCacheToFlash(); 
+    }
+    void setHumidityThreshold(uint32_t val) { 
+        _cache.humidity_threshold = val; 
+        writeCacheToFlash(); 
+    }
+    void setTemperatureThreshold(uint32_t val) { 
+        _cache.temperature_threshold = val; 
+        writeCacheToFlash(); 
+    }
+
 };
 
 inline EEPROM_Emulator eeprom(FLASH_ADDR, 2);
 
 inline void eeprom_write(EEPROM_IDs id, uint32_t value) {
-    eeprom.WriteEEPROM(id, value);
+    eeprom.writeCacheToFlash();
 }
 
 template<typename T>

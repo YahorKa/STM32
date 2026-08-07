@@ -103,7 +103,7 @@ bool DTH11::read()
     if (_data[0]+ _data[1] + _data[2] + _data[3]  != _data[4]){
         _lastError = DHT11_Error::ERR_CHECKSUM;
         return false;
-    }
+    } else _history.push(get_humidity());
     return true;
 
 }
@@ -173,7 +173,7 @@ bool DTH11::hardReset()
         HAL_Delay(500);
         init();
         _hard_reset_counter++;
-        eeprom_write(DH11_RESTART, _hard_reset_counter);
+        eeprom.setDh11Restart(_hard_reset_counter);
         return true;
     }
     // TODO: How to reset if we have no power control

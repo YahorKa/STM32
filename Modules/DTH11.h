@@ -1,10 +1,12 @@
 
 #ifndef DTH11_H
 #define DTH11_H
+#include "display_ssd1306.h"
 #include "module.h"
 #include "gpio.h"
 #include <cstdint>
 #include <array>
+#include "ring_buffer.h"
 
 enum class DHT11_Error : uint8_t {
     OK = 0,
@@ -37,10 +39,13 @@ public:
     uint8_t getTempDec() const { return _data[3]; }
     uint8_t getTempH() const { return _data[1]; }
     uint8_t getReset() const { return _hard_reset_counter; }
+    const RingBuffer<uint8_t, 128>& get_history() {return _history;}
     bool read();
 
 private:
     std::array<char, 5> _data = {};
+    //ifdef DTH11 (else RingBuffer<float>)
+    RingBuffer<uint8_t, 128> _history;
     float _temperature;
     float _humidity;
     uint32_t _hard_reset_counter;

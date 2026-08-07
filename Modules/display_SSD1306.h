@@ -2,7 +2,10 @@
 #define DISPLAY_SSD1306_H
 #include "i2c.h"
 #include "module.h"
+#include <cstddef>
 #include <stdint.h>
+#include "ring_buffer.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,7 +66,25 @@ public:
   // Рисование примитивов
     void drawPixel(int x, int y, bool on = true);
     void drawLine(int x1, int y1, int x2, int y2, bool on = true);
+    // x,y (coordinate of up-left corner) w(width) h(height)
     void drawRect(int x, int y, int w, int h, bool fill = false);
+    template<typename T, int MAX>
+    void drawGraph(const RingBuffer<T, MAX>& buffer, int x, int y, int w, int h)
+    {
+      {
+      if (buffer.size() < 2) return;
+      float step = (float)(w - 1) / (buffer.size() - 1);
+      for (int i = 0; i < buffer.size() - 1; i++) {
+        int x1 = x + (int)(i * step);
+        int x2 = x + (int)((i + 1) * step);
+        float v1 = (float)buffer.get(i);
+        float v2 = (float)buffer.get(i + 1);
+        int y1 = y + h - (int)(v1 * h / 100);
+        int y2 = y + h - (int)(v2 * h / 100);
+        drawLine(x1, y1, x2, y2);
+      }
+      }
+    }
 
     FrameBuffer buffer;
 private:
