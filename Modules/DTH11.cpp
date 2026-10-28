@@ -25,14 +25,15 @@ const char* DTH11::getErrorString() const {
         default:                                return "???";
     }
 }
-
+// TO DO GLOBAL getMicros()
 uint32_t DTH11::getMicros(){
     return TIM3->CNT; 
 }
+
 void DTH11::delayUs(uint32_t us)
 {
    uint32_t start = TIM3->CNT;
-   while ((TIM3->CNT - start) < us) {
+   while ((getMicros() - start) < us) {
         __NOP();
     }
 }
@@ -103,7 +104,21 @@ bool DTH11::read()
     if (_data[0]+ _data[1] + _data[2] + _data[3]  != _data[4]){
         _lastError = DHT11_Error::ERR_CHECKSUM;
         return false;
-    } else _history.push(get_humidity());
+    } else  {
+        auto hum = get_humidity();
+        _history.push(hum);
+        // slow history
+        _slow_accum += hum;
+        _slow_count++;
+        auto now = HAL_GetTick()/1000;
+        if (now - _last_slow_update >= 600) { // 10 минут
+                _history_slow.push(_slow_accum / _slow_count);
+                _slow_accum = 0;
+                _slow_count = 0;
+                _last_slow_update = now;
+            }
+
+    }
     return true;
 
 }
@@ -156,7 +171,7 @@ static uint8_t ErrorCount = 0;
 if (_lastError == DHT11_Error::OK){
     ErrorCount = 0;
 } else {
-    if (ErrorCount > 2) {
+    if (ErrorCount > 5) {
         //Reload
         if (hardReset())  ErrorCount = 0;
     } else ErrorCount++;
@@ -170,7 +185,7 @@ bool DTH11::hardReset()
    // Power off and init
    if (_vcc_port && _vcc_pin){
         HAL_GPIO_WritePin(_vcc_port, _vcc_pin, GPIO_PIN_RESET);
-        HAL_Delay(500);
+        HAL_Delay(1000);
         init();
         _hard_reset_counter++;
         eeprom.setDh11Restart(_hard_reset_counter);

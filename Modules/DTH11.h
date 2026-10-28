@@ -35,17 +35,23 @@ public:
     inline bool readPin() {return HAL_GPIO_ReadPin(_data_port, _data_pin) == GPIO_PIN_SET;}
     inline int  readBit();
     inline float get_temperature() const {return _data[2] +  _data[3] * 0.1f;}
-    inline float get_humidity() const {return _data[0]+_data[1] * 0.1f;}
+    inline float get_humidity() const {return _data[0] + _data[1] * 0.1f;}
     uint8_t getTempDec() const { return _data[3]; }
     uint8_t getTempH() const { return _data[1]; }
     uint8_t getReset() const { return _hard_reset_counter; }
     const RingBuffer<uint8_t, 128>& get_history() {return _history;}
+    const RingBuffer<uint8_t, 144>& get_slow_history() {return _history_slow;}
+
     bool read();
 
 private:
     std::array<char, 5> _data = {};
     //ifdef DTH11 (else RingBuffer<float>)
     RingBuffer<uint8_t, 128> _history;
+    RingBuffer<uint8_t, 144> _history_slow; 
+    uint32_t _last_slow_update = 0;
+    float _slow_accum = 0;
+    int _slow_count = 0;
     float _temperature;
     float _humidity;
     uint32_t _hard_reset_counter;

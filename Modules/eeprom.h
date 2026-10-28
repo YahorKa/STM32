@@ -92,6 +92,7 @@ public:
             dataPtr[i] = flashPtr[i];
         }
     }
+    
     HAL_StatusTypeDef writeCacheToFlash() 
     {
         uint32_t last_adr = startAddr + (EEPROM_LAST - 1) * DATA_SIZE;

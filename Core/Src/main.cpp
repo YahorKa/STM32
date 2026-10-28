@@ -5,6 +5,7 @@
 
 #include "main.h"
 #include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_gpio.h"
 #include <cstdint>
 #include <string>
 #include <stdio.h>
@@ -106,6 +107,8 @@ void Error_Handler(void)
   while (1)
   {
     printf("error handler");
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(300);
     break;
   }
 }
@@ -147,16 +150,16 @@ int main(void)
     //ServoSG90 servo;
   //servo.init();
 
-  DTH11 dth(GPIOB, GPIO_PIN_1, GPIOB, GPIO_PIN_12);
+  DTH11 dth(GPIOB, GPIO_PIN_1,GPIOB,GPIO_PIN_12);
   HAL_Delay(1000);
   PIN heater(GPIOA, GPIO_PIN_1);
   PIN fan(GPIOB, GPIO_PIN_0);
   Watchdog iwdg;
   iwdg.init();
   Timer timer;
-  
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
   display.init();
-
+   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 #if (isPWM)
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
@@ -227,10 +230,10 @@ int main(void)
     display.drawText(buf);
 
     display.drawRect(1, 40, 125, 24 );
-    display.drawGraph(dth.get_history(), 0, 40, 128, 24);
+    display.drawGraph(dth.get_slow_history(), 0, 40, 128, 24);
 
     display.loop_ms(1000);
-    dth.loop_ms(2000);
+    dth.loop_ms(3000);
     timer.loop_ms(1000);
     iwdg.feed();
     /* Servo TEXT if anable

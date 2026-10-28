@@ -20,6 +20,12 @@ extern const unsigned char F8X16[];
 #ifdef __cplusplus
 }
 #endif
+
+template <typename T>
+T constrain(T x, T minVal, T maxVal) {
+   return std::min(std::max(x, minVal), maxVal);
+}
+
 struct FrameBuffer {
     static constexpr int PAGES = 8;
     static constexpr int HEIGHT = 64;
@@ -71,16 +77,23 @@ public:
     template<typename T, int MAX>
     void drawGraph(const RingBuffer<T, MAX>& buffer, int x, int y, int w, int h)
     {
-      {
       if (buffer.size() < 2) return;
+      constexpr float MIN_VALUE = 50.0f;
+      constexpr float MAX_VALUE = 100.0f;
+      constexpr float RANGE = MAX_VALUE - MIN_VALUE;
+      {
       float step = (float)(w - 1) / (buffer.size() - 1);
       for (int i = 0; i < buffer.size() - 1; i++) {
         int x1 = x + (int)(i * step);
         int x2 = x + (int)((i + 1) * step);
         float v1 = (float)buffer.get(i);
         float v2 = (float)buffer.get(i + 1);
-        int y1 = y + h - (int)(v1 * h / 100);
-        int y2 = y + h - (int)(v2 * h / 100);
+
+        v1 = constrain(v1, MIN_VALUE,  MAX_VALUE);
+        v2 = constrain(v2, MIN_VALUE,  MAX_VALUE);
+
+        int y1 = y + h - (int)((v1 - MIN_VALUE) * h / RANGE);
+        int y2 = y + h - (int)((v2 - MIN_VALUE) * h / RANGE);
         drawLine(x1, y1, x2, y2);
       }
       }
